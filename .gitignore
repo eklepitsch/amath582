@@ -1,0 +1,14 @@
+*.idea
+*.venv
+*.pdf
+*.png
+*.csv
+*.npy
+
+# TeXStudio files
+*.aux
+*.log
+*.synctex*
+
+# Jupyter notebook files
+*.ipynb*
