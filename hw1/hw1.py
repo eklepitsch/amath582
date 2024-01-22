@@ -36,12 +36,29 @@ print(f'Value in center frequency bin: {center_frequency_bin_value}')
 k = np.arange(0, N_grid)
 fig_noise, ax_noise = plt.subplots(1, 3)
 ax_noise[0].plot(k, f_hat_avg[:, center_frequency_bin[1],
-                 center_frequency_bin[2]],
-                 label='Center frequency in x-direction')
+                 center_frequency_bin[2]])
+ax_noise[0].axvline(center_frequency_bin[0], color='r', linestyle='--',
+                    label=f'Center frequency = {center_frequency_bin[0]}')
+ax_noise[0].set_title(r'Center frequency in $\bf{x}$-direction')
+ax_noise[0].set_xlabel('Frequency bin (k)')
+ax_noise[0].set_ylabel('Magnitude')
+ax_noise[0].legend()
 ax_noise[1].plot(k, f_hat_avg[center_frequency_bin[0], :,
-                 center_frequency_bin[2]],
-                 label='Center frequency in y-direction')
+                 center_frequency_bin[2]])
+ax_noise[1].axvline(center_frequency_bin[1], color='r', linestyle='--',
+                    label=f'Center frequency = {center_frequency_bin[1]}')
+ax_noise[1].set_title(r'Center frequency in $\bf{y}$-direction')
+ax_noise[1].set_xlabel('Frequency bin (k)')
+ax_noise[1].set_ylabel('Magnitude')
+ax_noise[1].legend()
 ax_noise[2].plot(k, f_hat_avg[center_frequency_bin[0],
-                 center_frequency_bin[1], :],
-                 label='Center frequency in z-direction')
+                 center_frequency_bin[1], :])
+ax_noise[2].axvline(center_frequency_bin[2], color='r', linestyle='--',
+                    label=f'Center frequency = {center_frequency_bin[2]}')
+ax_noise[2].set_title(r'Center frequency in $\bf{z}$-direction')
+ax_noise[2].set_xlabel('Frequency bin (k)')
+ax_noise[2].set_ylabel('Magnitude')
+ax_noise[2].legend()
+fig_noise.set_figwidth(15)
+fig_noise.tight_layout(pad=3)
 fig_noise.show()
