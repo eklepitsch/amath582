@@ -200,6 +200,22 @@ if save_figures:
     fig_position.savefig(os.path.join(image_dir,
                                       f'sub-position-sigma-{sigma_x}.png'))
 
+# Plot the 2-D path
+fig_position_2d, ax_position_2d = plt.subplots()
+ax_position_2d.scatter(submarine_position[0, 0], submarine_position[0, 1],
+                       color='k', label='t = 0 hrs')
+ax_position_2d.scatter(submarine_position[2:-1, 0], submarine_position[2:-1, 1])
+ax_position_2d.scatter(submarine_position[-1, 0], submarine_position[-1, 1],
+                       color='r', label='t = 24 hrs')
+ax_position_2d.set_xlabel('x')
+ax_position_2d.set_ylabel('y')
+ax_position_2d.legend()
+fig_position_2d.suptitle(f'Position of submarine in 2-D\nFilter parameters:'
+                         fr'$\sigma_x$ = {sigma_x}, $\sigma_y$ = {sigma_y}, '
+                         fr'$\sigma_z$ = {sigma_z}')
+if save_figures:
+    fig_position_2d.savefig(f'sub-position-2d-sigma-{sigma_x}.png')
+
 # Now plot the 3-D path
 fig_position_3d, ax_position_3d = plt.subplots(subplot_kw=dict(projection='3d'))
 ax_position_3d.scatter3D(submarine_position[0, 0], submarine_position[0, 1],
