@@ -102,6 +102,11 @@ def gaussian(x, center=0, sigma=1, scale=1):
     return scale * np.exp(-(x - center)**2/sigma**2)
 
 
+def gaussian_3d(x, y, z, center_x=0, center_y=0, center_z=0, sigma=1, scale=1):
+    return scale * np.exp(-(((x - center_x)**2)+((y - center_y)**2)+
+                            ((z - center_z)**2))/sigma**2)
+
+
 # Make some plots to show the filter design in each direction
 fig_filter, ax_filter = plt.subplots(1, 3)
 ax_filter[0].plot(k, f_hat_avg[:, center_frequency_bin[1],
@@ -146,21 +151,15 @@ ax_filter[2].legend()
 if save_figures:
     fig_filter.savefig(os.path.join(image_dir, 'filter-design.png'))
 
-# In x direction, choose sigma = 3.
-# In y direction, choose sigma = 5.
-# in z direction, choose sigma = 3.
-sigma_x = 3
-sigma_y = 5
-sigma_z = 3
 
-# Create a 3-D Gaussian filter by multiplying 1-D filters
+# Create a 3-D Gaussian filter
+sigma=5
 X, Y, Z = np.meshgrid(k, k, k, indexing='ij')
-filter = gaussian(X, center_frequency_bin_shifted[0], sigma_x,
-                  center_frequency_bin_value) * \
-         gaussian(Y, center_frequency_bin_shifted[1], sigma_y,
-                  center_frequency_bin_value) * \
-         gaussian(Z, center_frequency_bin_shifted[2], sigma_z,
-                  center_frequency_bin_value)
+filter = gaussian_3d(X, Y, Z,
+                     center_frequency_bin_shifted[0],
+                     center_frequency_bin_shifted[1],
+                     center_frequency_bin_shifted[2],
+                     sigma)
 
 for i in range(0, N_measurements):
     # Apply the 3-D filter in the frequency domain
@@ -193,12 +192,11 @@ ax_position[2].set_ylabel('position (grid coordinate)')
 ax_position[2].yaxis.set_major_locator(MaxNLocator(integer=True))
 fig_position.set_figwidth(15)
 fig_position.tight_layout(pad=4)
-fig_position.suptitle(f'Position of submarine\nFilter parameters: '
-                      fr'$\sigma_x$ = {sigma_x}, $\sigma_y$ = {sigma_y}, '
-                      fr'$\sigma_z$ = {sigma_z}')
+fig_position.suptitle(f'Position of submarine\n'
+                      fr'$\sigma$ = {sigma}')
 if save_figures:
     fig_position.savefig(os.path.join(image_dir,
-                                      f'sub-position-sigma-{sigma_x}.png'))
+                                      f'sub-position-sigma-{sigma}.png'))
 
 # Plot the 2-D path
 fig_position_2d, ax_position_2d = plt.subplots()
@@ -212,12 +210,11 @@ ax_position_2d.plot(submarine_position[:, 0], submarine_position[:, 1],
 ax_position_2d.set_xlabel('x')
 ax_position_2d.set_ylabel('y')
 ax_position_2d.legend()
-fig_position_2d.suptitle(f'Position of submarine in 2-D\nFilter parameters: '
-                         fr'$\sigma_x$ = {sigma_x}, $\sigma_y$ = {sigma_y}, '
-                         fr'$\sigma_z$ = {sigma_z}')
+fig_position_2d.suptitle(f'Position of submarine in 2-D\n'
+                         fr'$\sigma$ = {sigma}')
 if save_figures:
     fig_position_2d.savefig(os.path.join(image_dir,
-                                         f'sub-position-2d-sigma-{sigma_x}.png'))
+                                         f'sub-position-2d-sigma-{sigma}.png'))
 
 # Now plot the 3-D path
 fig_position_3d, ax_position_3d = plt.subplots(subplot_kw=dict(projection='3d'))
@@ -233,12 +230,11 @@ ax_position_3d.set_xlabel('x')
 ax_position_3d.set_ylabel('y')
 ax_position_3d.set_zlabel('z')
 ax_position_3d.legend()
-fig_position_3d.suptitle(f'Position of submarine in 3-D\nFilter parameters: '
-                         fr'$\sigma_x$ = {sigma_x}, $\sigma_y$ = {sigma_y}, '
-                         fr'$\sigma_z$ = {sigma_z}')
+fig_position_3d.suptitle(f'Position of submarine in 3-D\n'
+                         fr'$\sigma$ = {sigma}')
 if save_figures:
     fig_position_3d.savefig(os.path.join(image_dir,
-                                         f'sub-position-3d-sigma-{sigma_x}'))
+                                         f'sub-position-3d-sigma-{sigma}'))
 
 # Show the plots if we're not saving them to files
 if not save_figures:
