@@ -93,16 +93,61 @@ def get_sample_data_xyz(movement, index):
 xyz_test = get_sample_data_xyz(RUNNING, 3)
 xyz_real = training_data[RUNNING][3].reshape(n_joints, n_axes, -1)
 
-pca = PCA(n_components=5)
-pca.fit_transform(X_train.transpose())
+pca = PCA(n_components=5, svd_solver='full')
+pca.fit(X_train.transpose())
 mode_xyz = np.reshape(pca.components_, (5, n_joints, n_axes))
-fig_pca_modes, ax_pca_modes = plt.subplots(subplot_kw=dict(projection='3d'))
+fig_pca_modes, ax_pca_modes = plt.subplots(1, 5, subplot_kw=dict(projection='3d'))
 for mode in range(5):
-    ax_pca_modes.scatter3D(mode_xyz[mode, :, 0], mode_xyz[mode, :, 1],
-                           mode_xyz[mode, :, 2], label=f'Mode {mode}')
-ax_pca_modes.legend()
-ax_pca_modes.set_xlabel('x')
-ax_pca_modes.set_ylabel('y')
-ax_pca_modes.set_zlabel('z')
-fig_pca_modes.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space')
+    ax_pca_modes[mode].scatter3D(mode_xyz[mode, :, 0], mode_xyz[mode, :, 1],
+                                 mode_xyz[mode, :, 2], label=f'Mode {mode + 1}')
+    ax_pca_modes[mode].legend()
+    ax_pca_modes[mode].set_xlabel('x')
+    ax_pca_modes[mode].set_ylabel('y')
+    ax_pca_modes[mode].set_zlabel('z')
+
+fig_pca_modes.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space - using sklearn.PCA')
+fig_pca_modes.set_figwidth(15)
+fig_pca_modes.tight_layout(pad=3)
 fig_pca_modes.show()
+
+
+# SVD approach
+X_train_centered = X_train - np.mean(X_train, axis=1)[:, None]
+dU, ds, dVt = np.linalg.svd(X_train_centered)
+print(dU.shape, ds.shape, dVt.shape)
+
+fig_pca_modes_svd, ax_pca_modes_svd = plt.subplots(1, 5, subplot_kw=dict(projection='3d'))
+for mode in range(5):
+    mode_xyz = dU[:, mode].reshape(n_joints, n_axes)
+    ax_pca_modes_svd[mode].scatter3D(mode_xyz[:, 0], mode_xyz[:, 1],
+                                     mode_xyz[:, 2], label=f'Mode {mode + 1}')
+    ax_pca_modes_svd[mode].legend()
+    ax_pca_modes_svd[mode].set_xlabel('x')
+    ax_pca_modes_svd[mode].set_ylabel('y')
+    ax_pca_modes_svd[mode].set_zlabel('z')
+
+fig_pca_modes_svd.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space - using SVD')
+fig_pca_modes_svd.set_figwidth(15)
+fig_pca_modes_svd.tight_layout(pad=3)
+fig_pca_modes_svd.show()
+
+# First 5 PCA modes in 1-D space
+fig_pca_modes_svd_1d, ax_pca_modes_svd_1d = plt.subplots()
+for mode in range(5):
+    ax_pca_modes_svd_1d.plot(dU[:, mode], label=f'Mode {mode + 1}')
+ax_pca_modes_svd_1d.legend()
+fig_pca_modes_svd_1d.suptitle('First 5 PCA modes using SVD, in 1D')
+fig_pca_modes_svd_1d.show()
+
+# Plot singular values
+fig_singular_values, ax_singular_values = plt.subplots()
+E = np.power(ds, 2)/np.sum(np.power(ds, 2))
+ax_singular_values.plot(np.cumsum(E)[:15])
+
+ax_singular_values.set_xlabel('index $j$')
+ax_singular_values.set_ylabel('$\Sigma E_j$')
+fig_singular_values.show()
+
+print(pca.singular_values_)
+print(ds)
+
