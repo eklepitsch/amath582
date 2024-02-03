@@ -142,12 +142,21 @@ fig_pca_modes_svd_1d.show()
 # Plot singular values
 fig_singular_values, ax_singular_values = plt.subplots()
 E = np.power(ds, 2)/np.sum(np.power(ds, 2))
-ax_singular_values.plot(np.cumsum(E)[:15])
+E_cumsum = np.cumsum(E)
+ax_singular_values.plot(E_cumsum[:15], label='Cumulative energy')
+ax_singular_values.hlines([0.7, 0.8, 0.9, 0.95], 0, 15, linestyles='dashed', colors='r',
+                          label='Energy level threshold')
 
 ax_singular_values.set_xlabel('index $j$')
 ax_singular_values.set_ylabel('$\Sigma E_j$')
+ax_singular_values.legend()
+fig_singular_values.suptitle('Cumulative energy - Using SVD')
 fig_singular_values.show()
 
-print(pca.singular_values_)
-print(ds)
+# print(pca.singular_values_)
+# print(ds)
 
+# Reconstruct X_train using 2 modes
+ds_2modes = np.copy(ds)
+ds_2modes[2:] = 0
+X_approx_2modes = np.mean(X_train, axis=1)[:, None] + np.dot(dU, np.dot(np.diag(ds_2modes), dVt))
