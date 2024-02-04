@@ -1,9 +1,10 @@
 import numpy as np
+import math
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
 from sklearn.decomposition import PCA
-from enum import Enum
+from sklearn.metrics import accuracy_score
 
 
 JUMPING = 'jumping'
@@ -88,6 +89,11 @@ for movement in movements:
 def get_sample_data_xyz(movement, index):
     n_start, n_end = get_sample_column_range(movement, index)
     return X_train[:, n_start:n_end].reshape(n_joints, n_axes, -1)
+
+
+def get_sample_data(movement, index):
+    n_start, n_end = get_sample_column_range(movement, index)
+    return X_train[:, n_start:n_end]
 
 
 xyz_test = get_sample_data_xyz(RUNNING, 3)
@@ -211,3 +217,61 @@ pca_3d_ax.set_ylabel('PCA2')
 pca_3d_ax.set_zlabel('PCA3')
 pca_3d_fig.suptitle('PCA1, PCA2, PCA3 space')
 pca_3d_fig.show()
+
+# Compute centroids for each movement in each space
+pca_2d_centroids = {
+    JUMPING: (np.mean(pca_components_2[0, 0:500]),
+              np.mean(pca_components_2[1, 0:500])),
+    RUNNING: (np.mean(pca_components_2[0, 500:1000]),
+              np.mean(pca_components_2[1, 500:1000])),
+    WALKING: (np.mean(pca_components_2[0, 1000:1500]),
+              np.mean(pca_components_2[1, 1000:1500]))
+}
+
+pca_3d_centroids = {
+    JUMPING: (np.mean(pca_components_3[0, 0:500]),
+              np.mean(pca_components_3[1, 0:500]),
+              np.mean(pca_components_3[2, 0:500])),
+    RUNNING: (np.mean(pca_components_3[0, 500:1000]),
+              np.mean(pca_components_3[1, 500:1000]),
+              np.mean(pca_components_3[2, 500:1000])),
+    WALKING: (np.mean(pca_components_3[0, 1000:1500]),
+              np.mean(pca_components_3[1, 1000:1500]),
+              np.mean(pca_components_3[2, 1000:1500]))
+}
+
+ground_truth = [JUMPING, JUMPING, JUMPING, JUMPING, JUMPING,
+                RUNNING, RUNNING, RUNNING, RUNNING, RUNNING,
+                WALKING, WALKING, WALKING, WALKING, WALKING]
+predicted_labels_2PCA = []
+predicted_labels_3PCA = []
+
+# Loop through each sample, project to PCA-2 space, and classify
+for m in movements:
+    for i in range(n_samples):
+        sample = get_sample_data(m, i)
+        pca_point = np.dot(du_2_T, sample)
+        pca_point_centroid = (np.mean(pca_point[0, :]), np.mean(pca_point[1, :]))
+        distances = {}
+        for mvmt, centroid in pca_2d_centroids.items():
+            distances[mvmt] = math.dist(pca_point_centroid, centroid)
+        predicted_labels_2PCA.append(min(distances, key=distances.get))
+
+accuracy_2pca = accuracy_score(ground_truth, predicted_labels_2PCA)
+print(f'Accuracy of classifier in 2-PCA space: {accuracy_2pca}')
+
+# Loop through each sample, project to PCA-3 space, and classify
+for m in movements:
+    for i in range(n_samples):
+        sample = get_sample_data(m, i)
+        pca_point = np.dot(du_3_T, sample)
+        pca_point_centroid = (np.mean(pca_point[0, :]),
+                              np.mean(pca_point[1, :]),
+                              np.mean(pca_point[2, :]))
+        distances = {}
+        for mvmt, centroid in pca_3d_centroids.items():
+            distances[mvmt] = math.dist(pca_point_centroid, centroid)
+        predicted_labels_3PCA.append(min(distances, key=distances.get))
+
+accuracy_3pca = accuracy_score(ground_truth, predicted_labels_3PCA)
+print(f'Accuracy of classifier in 3-PCA space: {accuracy_3pca}')
