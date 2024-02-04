@@ -275,3 +275,57 @@ for m in movements:
 
 accuracy_3pca = accuracy_score(ground_truth, predicted_labels_3PCA)
 print(f'Accuracy of classifier in 3-PCA space: {accuracy_3pca}')
+
+
+# Build a generic classifier for any k-PCA space
+def classifier(k):
+    if k > n_joints * n_axes:
+        print(f'k cannot be larger than {n_joints * n_axes}')
+        return
+
+    # Reconstruct X_train using k modes
+    ds_kmodes = np.copy(ds)
+    ds_kmodes[k:] = 0
+    ds_kmodes_diag = np.diag(ds_kmodes)
+    ds_kmodes_append = np.zeros((114, 1386))
+    ds_kmodes = np.hstack((ds_kmodes_diag, ds_kmodes_append))
+    X_approx_kmodes = np.mean(X_train, axis=1)[:, None] + \
+                      np.dot(dU, np.dot(ds_kmodes, dVt))
+
+    # Project the reconstructed X_train into k-PCA space
+    du_k = dU[:, 0:k]
+    du_k_T = du_k.transpose()
+    pca_components_k = np.dot(du_k_T, X_approx_kmodes)
+    pass
+
+    # Compute the k-centroid for each movement
+    pca_kd_centroids = {}
+    pca_kd_centroids[JUMPING] = \
+        [np.mean(pca_components_k[i, 0:500]) for i in range(k)]
+    pca_kd_centroids[RUNNING] = \
+        [np.mean(pca_components_k[i, 500:1000]) for i in range(k)]
+    pca_kd_centroids[WALKING] = \
+        [np.mean(pca_components_k[i, 1000:1500]) for i in range(k)]
+
+    # Loop through each sample, project to PCA-k space, and classify
+    predicted_labels_kPCA = []
+    for m in movements:
+        for i in range(n_samples):
+            sample = get_sample_data(m, i)
+            pca_point = np.dot(du_k_T, sample)
+            pca_point_centroid = [np.mean(pca_point[i, :]) for i in range(k)]
+            distances = {}
+            for mvmt, centroid in pca_kd_centroids.items():
+                distances[mvmt] = math.dist(pca_point_centroid, centroid)
+            predicted_labels_kPCA.append(min(distances, key=distances.get))
+
+    accuracy_kpca = accuracy_score(ground_truth, predicted_labels_kPCA)
+
+    return accuracy_kpca, predicted_labels_kPCA
+
+accuracies = []
+for k in range(1, 41):
+    accuracy, _ = classifier(k)
+    accuracies.append(accuracy)
+
+print(accuracies)
