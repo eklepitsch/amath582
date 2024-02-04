@@ -159,4 +159,55 @@ fig_singular_values.show()
 # Reconstruct X_train using 2 modes
 ds_2modes = np.copy(ds)
 ds_2modes[2:] = 0
-X_approx_2modes = np.mean(X_train, axis=1)[:, None] + np.dot(dU, np.dot(np.diag(ds_2modes), dVt))
+ds_2modes_diag = np.diag(ds_2modes)
+ds_2modes_append = np.zeros((114, 1386))
+ds_2modes = np.hstack((ds_2modes_diag, ds_2modes_append))
+X_approx_2modes = np.mean(X_train, axis=1)[:, None] + \
+                  np.dot(dU, np.dot(ds_2modes, dVt))
+
+du_2 = dU[:, 0:2]
+du_2_T = du_2.transpose()
+pca_components_2 = np.dot(du_2_T, X_approx_2modes)
+
+pca_2d_fig, pca_2d_ax = plt.subplots()
+pca_2d_ax.plot(pca_components_2[0, 0:500], pca_components_2[1, 0:500],
+               color='r', label=JUMPING)
+pca_2d_ax.plot(pca_components_2[0, 500:1000], pca_components_2[1, 500:1000],
+               color='g', label=RUNNING)
+pca_2d_ax.plot(pca_components_2[0, 1000:1500], pca_components_2[1, 1000:1500],
+               color='b', label=WALKING)
+pca_2d_ax.legend()
+pca_2d_ax.set_xlabel('PCA1')
+pca_2d_ax.set_ylabel('PCA2')
+pca_2d_fig.suptitle('PCA1, PCA2 space')
+pca_2d_fig.show()
+
+# Reconstruct X_train using 3 modes
+ds_3modes = np.copy(ds)
+ds_3modes[3:] = 0
+ds_3modes_diag = np.diag(ds_3modes)
+ds_3modes_append = np.zeros((114, 1386))
+ds_3modes = np.hstack((ds_3modes_diag, ds_3modes_append))
+X_approx_3modes = np.mean(X_train, axis=1)[:, None] + \
+                  np.dot(dU, np.dot(ds_3modes, dVt))
+
+du_3 = dU[:, 0:3]
+du_3_T = du_3.transpose()
+pca_components_3 = np.dot(du_3_T, X_approx_3modes)
+
+pca_3d_fig, pca_3d_ax = plt.subplots(subplot_kw=dict(projection='3d'))
+pca_3d_ax.plot(pca_components_3[0, 0:500], pca_components_3[1, 0:500],
+               pca_components_3[2, 0:500],
+               color='r', label=JUMPING)
+pca_3d_ax.plot(pca_components_3[0, 500:1000], pca_components_3[1, 500:1000],
+               pca_components_3[2, 500:1000],
+               color='g', label=RUNNING)
+pca_3d_ax.plot(pca_components_3[0, 1000:1500], pca_components_3[1, 1000:1500],
+               pca_components_3[2, 1000:1500],
+               color='b', label=WALKING)
+pca_3d_ax.legend()
+pca_3d_ax.set_xlabel('PCA1')
+pca_3d_ax.set_ylabel('PCA2')
+pca_3d_ax.set_zlabel('PCA3')
+pca_3d_fig.suptitle('PCA1, PCA2, PCA3 space')
+pca_3d_fig.show()
