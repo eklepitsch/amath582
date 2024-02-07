@@ -299,6 +299,13 @@ for m in movements:
 accuracy_3pca = accuracy_score(ground_truth, predicted_labels_3PCA)
 print(f'Accuracy of classifier in 3-PCA space: {accuracy_3pca}')
 
+ground_truth = []
+for i in range(500):
+    ground_truth.append(JUMPING)
+for i in range(500):
+    ground_truth.append(RUNNING)
+for i in range(500):
+    ground_truth.append(WALKING)
 
 # Build a generic classifier for any k-PCA space
 def classifier(k):
@@ -335,12 +342,13 @@ def classifier(k):
     for m in movements:
         for i in range(n_samples):
             sample = get_sample_data(m, i)
-            pca_point = np.dot(du_k_T, sample)
-            pca_point_centroid = [np.mean(pca_point[i, :]) for i in range(k)]
-            distances = {}
-            for mvmt, centroid in pca_kd_centroids.items():
-                distances[mvmt] = math.dist(pca_point_centroid, centroid)
-            predicted_labels_kPCA.append(min(distances, key=distances.get))
+            for j in range(n_timesteps):
+                pca_point = np.dot(du_k_T, sample[:, j])
+                # pca_point_centroid = [np.mean(pca_point[i, :]) for i in range(k)]
+                distances = {}
+                for mvmt, centroid in pca_kd_centroids.items():
+                    distances[mvmt] = math.dist(pca_point, centroid)
+                predicted_labels_kPCA.append(min(distances, key=distances.get))
 
     accuracy_kpca = accuracy_score(ground_truth, predicted_labels_kPCA)
 
@@ -352,3 +360,12 @@ for k in range(1, 41):
     accuracies.append(accuracy)
 
 print(accuracies)
+
+fig_accuracy, ax_accuracy = plt.subplots()
+k = np.arange(1, 41)
+ax_accuracy.plot(k, accuracies, label='Training')
+ax_accuracy.legend()
+ax_accuracy.set_xlabel('k')
+ax_accuracy.set_ylabel('accuracy')
+fig_accuracy.suptitle('Classifier accuracy for various $k$')
+fig_accuracy.show()
