@@ -227,6 +227,16 @@ pca_2d_centroids = {
     WALKING: (np.mean(pca_components_2[0, 1000:1500]),
               np.mean(pca_components_2[1, 1000:1500]))
 }
+pca_2d_ax.plot(pca_2d_centroids[JUMPING][0],
+               pca_2d_centroids[JUMPING][1],
+               label=JUMPING, color='r', marker='o', markersize=12)
+pca_2d_ax.plot(pca_2d_centroids[RUNNING][0],
+               pca_2d_centroids[RUNNING][1],
+               label=RUNNING, color='g', marker='o', markersize=12)
+pca_2d_ax.plot(pca_2d_centroids[WALKING][0],
+               pca_2d_centroids[WALKING][1],
+               label=WALKING, color='b', marker='o', markersize=12)
+pca_2d_fig.show()
 
 pca_3d_centroids = {
     JUMPING: (np.mean(pca_components_3[0, 0:500]),
@@ -239,6 +249,19 @@ pca_3d_centroids = {
               np.mean(pca_components_3[1, 1000:1500]),
               np.mean(pca_components_3[2, 1000:1500]))
 }
+pca_3d_ax.plot(pca_3d_centroids[JUMPING][0],
+               pca_3d_centroids[JUMPING][1],
+               pca_3d_centroids[JUMPING][2],
+               label=JUMPING, color='r', marker='o', markersize=12)
+pca_3d_ax.plot(pca_3d_centroids[RUNNING][0],
+               pca_3d_centroids[RUNNING][1],
+               pca_3d_centroids[RUNNING][2],
+               label=RUNNING, color='g', marker='o', markersize=12)
+pca_3d_ax.plot(pca_3d_centroids[WALKING][0],
+               pca_3d_centroids[WALKING][1],
+               pca_3d_centroids[WALKING][2],
+               label=WALKING, color='b', marker='o', markersize=12)
+pca_3d_fig.show()
 
 ground_truth = [JUMPING, JUMPING, JUMPING, JUMPING, JUMPING,
                 RUNNING, RUNNING, RUNNING, RUNNING, RUNNING,
