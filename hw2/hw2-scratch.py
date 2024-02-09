@@ -7,6 +7,17 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import accuracy_score
 
 
+# Set to True to save the figures to .png files
+save_figures = True
+image_dir_name = 'images'
+image_dir = None
+if save_figures:
+    # Bump up the resolution (adds processing time)
+    mpl.rcParams['figure.dpi'] = 900
+    image_dir = os.path.join(os.curdir, image_dir_name)
+    if not os.path.exists(image_dir):
+        os.mkdir(image_dir)
+
 JUMPING = 'jumping'
 RUNNING = 'running'
 WALKING = 'walking'
@@ -37,33 +48,7 @@ n_joints = 38
 n_axes = 3
 n_timesteps = 100
 
-# Construct the matrix X_train
-# For a 1710 x 100 matrix:
-# m = n_samples * n_movements * n_joints * n_axes
-# n = n_timesteps
-# X_train = np.empty((m, n))
-# rows_per_sample = n_joints * n_axes
-# rows_per_movement = n_samples * rows_per_sample
-
-# def get_sample_row_range(movement, index):
-#     i = movements.index(movement)
-#     j = index
-#     row_start = (i * rows_per_movement) + (j * rows_per_sample)
-#     row_end = (i * rows_per_movement) + ((j + 1) * rows_per_sample)
-#     return row_start, row_end
-#
-#
-# for movement in movements:
-#     for j in range(n_samples):
-#         m_start, m_end = get_sample_row_range(movement, j)
-#         X_train[m_start:m_end, :] = training_data[movement][j]
-#
-#
-# def get_sample_data_xyz(movement, index):
-#     m_start, m_end = get_sample_row_range(movement, index)
-#     return X_train[m_start:m_end, :].reshape(n_joints, n_axes, -1)
-
-# For a 114 x 1500 matrix:
+# Construct the matrix X_train (114 x 1500)
 m = n_joints * n_axes
 n = n_movements * n_samples * n_timesteps
 X_train = np.empty((m, n))
@@ -96,9 +81,6 @@ def get_sample_data(movement, index):
     return X_train[:, n_start:n_end]
 
 
-xyz_test = get_sample_data_xyz(RUNNING, 3)
-xyz_real = training_data[RUNNING][3].reshape(n_joints, n_axes, -1)
-
 pca = PCA(n_components=5, svd_solver='full')
 pca.fit(X_train.transpose())
 mode_xyz = np.reshape(pca.components_, (5, n_joints, n_axes))
@@ -114,7 +96,6 @@ for mode in range(5):
 fig_pca_modes.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space - using sklearn.PCA')
 fig_pca_modes.set_figwidth(15)
 fig_pca_modes.tight_layout(pad=3)
-fig_pca_modes.show()
 
 
 # SVD approach
@@ -122,7 +103,8 @@ X_train_centered = X_train - np.mean(X_train, axis=1)[:, None]
 dU, ds, dVt = np.linalg.svd(X_train_centered)
 print(dU.shape, ds.shape, dVt.shape)
 
-fig_pca_modes_svd, ax_pca_modes_svd = plt.subplots(1, 5, subplot_kw=dict(projection='3d'))
+fig_pca_modes_svd, ax_pca_modes_svd = plt.subplots(1, 5,
+                                                   subplot_kw=dict(projection='3d'))
 for mode in range(5):
     mode_xyz = dU[:, mode].reshape(n_joints, n_axes)
     ax_pca_modes_svd[mode].scatter3D(mode_xyz[:, 0], mode_xyz[:, 1],
@@ -132,10 +114,14 @@ for mode in range(5):
     ax_pca_modes_svd[mode].set_ylabel('y')
     ax_pca_modes_svd[mode].set_zlabel('z')
 
-fig_pca_modes_svd.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space - using SVD')
+fig_pca_modes_svd.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space',
+                           y=0.92)
 fig_pca_modes_svd.set_figwidth(15)
+fig_pca_modes_svd.set_figheight(4)
 fig_pca_modes_svd.tight_layout(pad=3)
-fig_pca_modes_svd.show()
+if save_figures:
+    fig_pca_modes_svd.savefig(os.path.join(image_dir,
+                                           'first-5-pca-modes.png'))
 
 # First 5 PCA modes in 1-D space
 fig_pca_modes_svd_1d, ax_pca_modes_svd_1d = plt.subplots()
@@ -143,24 +129,44 @@ for mode in range(5):
     ax_pca_modes_svd_1d.plot(dU[:, mode], label=f'Mode {mode + 1}')
 ax_pca_modes_svd_1d.legend()
 fig_pca_modes_svd_1d.suptitle('First 5 PCA modes using SVD, in 1D')
-fig_pca_modes_svd_1d.show()
 
-# Plot singular values
-fig_singular_values, ax_singular_values = plt.subplots()
+# Plot the energy captured by the PCA modes
 E = np.power(ds, 2)/np.sum(np.power(ds, 2))
-E_cumsum = np.cumsum(E)
-ax_singular_values.plot(E_cumsum[:15], label='Cumulative energy')
-ax_singular_values.hlines([0.7, 0.8, 0.9, 0.95], 0, 15, linestyles='dashed', colors='r',
+E_cumsum = np.pad(np.cumsum(E), 1)  # Padd with one zero for sake of the plot
+
+thresholds = {0.7: None, 0.8: None, 0.9: None, 0.95: None}
+for thresh, mode in thresholds.items():
+    condition = [energy > thresh for energy in E_cumsum]
+    m = next(i for i, x in enumerate(condition) if x)
+    thresholds[thresh] = m + 1  # Account for zero-based index
+
+fig_singular_values, ax_singular_values = \
+    plt.subplots(nrows=1, ncols=2, width_ratios=[5, 3],
+                 gridspec_kw={'left': 0.08,  # Left padding
+                             'right': 0.96,  # Right padding
+                             'wspace': 0.05})  # Space between axes
+fig_singular_values.set_figwidth(fig_singular_values.get_figwidth() * 1.5)  # Increase the width
+
+ax_singular_values[0].plot(E_cumsum[:15], label='Cumulative energy')
+ax_singular_values[0].hlines([0.7, 0.8, 0.9, 0.95], 0, 15, linestyles='dashed', colors='r',
                           label='Energy level threshold')
 
-ax_singular_values.set_xlabel('index $j$')
-ax_singular_values.set_ylabel('$\Sigma E_j$')
-ax_singular_values.legend()
-fig_singular_values.suptitle('Cumulative energy - Using SVD')
-fig_singular_values.show()
-
-# print(pca.singular_values_)
-# print(ds)
+ax_singular_values[0].set_xlabel('j')
+ax_singular_values[0].set_ylabel('$\Sigma E_j$')
+ax_singular_values[0].legend()
+# Plot a table containing the threshold values
+table_values = []
+for thresh, mode in thresholds.items():
+    table_values.append([thresh, mode])
+table = plt.table(cellText=table_values,
+                  colLabels=[r'Energy', r'PCA modes'],
+                  bbox=[0, 0, 1, 1])
+ax_singular_values[1].add_table(table)
+ax_singular_values[1].axis('off')
+fig_singular_values.suptitle('Cumulative energy of first j PCA modes')
+if save_figures:
+    fig_singular_values.savefig(os.path.join(
+        image_dir, 'cumulative-energy.png'))
 
 # Reconstruct X_train using 2 modes
 ds_2modes = np.copy(ds)
@@ -185,8 +191,9 @@ pca_2d_ax.plot(pca_components_2[0, 1000:1500], pca_components_2[1, 1000:1500],
 pca_2d_ax.legend()
 pca_2d_ax.set_xlabel('PCA1')
 pca_2d_ax.set_ylabel('PCA2')
-pca_2d_fig.suptitle('PCA1, PCA2 space')
-pca_2d_fig.show()
+pca_2d_fig.suptitle('$X_{train}$ in 2-PCA space')
+if save_figures:
+    pca_2d_fig.savefig(os.path.join(image_dir, '2-PCA-reconstruction.png'))
 
 # Reconstruct X_train using 3 modes
 ds_3modes = np.copy(ds)
@@ -216,7 +223,9 @@ pca_3d_ax.set_xlabel('PCA1')
 pca_3d_ax.set_ylabel('PCA2')
 pca_3d_ax.set_zlabel('PCA3')
 pca_3d_fig.suptitle('PCA1, PCA2, PCA3 space')
-pca_3d_fig.show()
+pca_3d_fig.suptitle('$X_{train}$ in 3-PCA space')
+if save_figures:
+    pca_3d_fig.savefig(os.path.join(image_dir, '3-PCA-reconstruction.png'))
 
 # Compute centroids for each movement in each space
 pca_2d_centroids = {
@@ -236,7 +245,6 @@ pca_2d_ax.plot(pca_2d_centroids[RUNNING][0],
 pca_2d_ax.plot(pca_2d_centroids[WALKING][0],
                pca_2d_centroids[WALKING][1],
                label=WALKING, color='b', marker='o', markersize=12)
-pca_2d_fig.show()
 
 pca_3d_centroids = {
     JUMPING: (np.mean(pca_components_3[0, 0:500]),
@@ -261,7 +269,9 @@ pca_3d_ax.plot(pca_3d_centroids[WALKING][0],
                pca_3d_centroids[WALKING][1],
                pca_3d_centroids[WALKING][2],
                label=WALKING, color='b', marker='o', markersize=12)
-pca_3d_fig.show()
+
+print(pca_2d_centroids)
+print(pca_3d_centroids)
 
 ground_truth = [JUMPING, JUMPING, JUMPING, JUMPING, JUMPING,
                 RUNNING, RUNNING, RUNNING, RUNNING, RUNNING,
@@ -299,16 +309,24 @@ for m in movements:
 accuracy_3pca = accuracy_score(ground_truth, predicted_labels_3PCA)
 print(f'Accuracy of classifier in 3-PCA space: {accuracy_3pca}')
 
-ground_truth = []
+ground_truth_train = []
 for i in range(500):
-    ground_truth.append(JUMPING)
+    ground_truth_train.append(JUMPING)
 for i in range(500):
-    ground_truth.append(RUNNING)
+    ground_truth_train.append(RUNNING)
 for i in range(500):
-    ground_truth.append(WALKING)
+    ground_truth_train.append(WALKING)
+
+ground_truth_test = []
+for i in range(100):
+    ground_truth_test.append(JUMPING)
+for i in range(100):
+    ground_truth_test.append(RUNNING)
+for i in range(100):
+    ground_truth_test.append(WALKING)
 
 # Build a generic classifier for any k-PCA space
-def classifier(k):
+def classifier(k, ground_truth, input='train', samples=n_samples):
     if k > n_joints * n_axes:
         print(f'k cannot be larger than {n_joints * n_axes}')
         return
@@ -340,8 +358,11 @@ def classifier(k):
     # Loop through each sample, project to PCA-k space, and classify
     predicted_labels_kPCA = []
     for m in movements:
-        for i in range(n_samples):
-            sample = get_sample_data(m, i)
+        for i in range(samples):
+            if input == 'train':
+                sample = get_sample_data(m, i)
+            else:
+                sample = testing_data[movement][i]
             for j in range(n_timesteps):
                 pca_point = np.dot(du_k_T, sample[:, j])
                 # pca_point_centroid = [np.mean(pca_point[i, :]) for i in range(k)]
@@ -356,16 +377,31 @@ def classifier(k):
 
 accuracies = []
 for k in range(1, 41):
-    accuracy, _ = classifier(k)
+    accuracy, _ = classifier(k, ground_truth_train, input='train',
+                             samples=n_samples)
     accuracies.append(accuracy)
 
 print(accuracies)
 
 fig_accuracy, ax_accuracy = plt.subplots()
 k = np.arange(1, 41)
-ax_accuracy.plot(k, accuracies, label='Training')
+ax_accuracy.plot(k[0:25], accuracies[0:25], label='Training')
+
+accuracies = []
+for k in range(1, 41):
+    accuracy, _ = classifier(k, ground_truth_test, input='test',
+                             samples=1)
+    accuracies.append(accuracy)
+
+k = np.arange(1, 41)
+ax_accuracy.plot(k[0:25], accuracies[0:25], label='Test')
+
 ax_accuracy.legend()
 ax_accuracy.set_xlabel('k')
 ax_accuracy.set_ylabel('accuracy')
 fig_accuracy.suptitle('Classifier accuracy for various $k$')
 fig_accuracy.show()
+
+
+if not save_figures:
+    plt.show()
