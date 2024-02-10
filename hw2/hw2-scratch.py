@@ -100,7 +100,6 @@ fig_pca_modes.tight_layout(pad=3)
 # Direct SVD approach
 X_train_centered = X_train - np.mean(X_train, axis=1)[:, None]
 dU, ds, dVt = np.linalg.svd(X_train_centered)
-print(dU.shape, ds.shape, dVt.shape)
 
 fig_pca_modes_svd, ax_pca_modes_svd = plt.subplots(1, 5,
                                                    subplot_kw=dict(projection='3d'))
