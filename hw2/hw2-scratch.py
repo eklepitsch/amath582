@@ -23,7 +23,6 @@ RUNNING = 'running'
 WALKING = 'walking'
 movements = [JUMPING, RUNNING, WALKING]
 
-
 # Specify data directories
 data_dir = os.path.join(os.curdir, 'hw2data')
 test_data_dir = os.path.join(data_dir, 'test')
@@ -81,6 +80,7 @@ def get_sample_data(movement, index):
     return X_train[:, n_start:n_end]
 
 
+# Scikit-learn PCA approach
 pca = PCA(n_components=5, svd_solver='full')
 pca.fit(X_train.transpose())
 mode_xyz = np.reshape(pca.components_, (5, n_joints, n_axes))
@@ -97,8 +97,7 @@ fig_pca_modes.suptitle('First 5 PCA modes of $X_{train}$ in xyz-space - using sk
 fig_pca_modes.set_figwidth(15)
 fig_pca_modes.tight_layout(pad=3)
 
-
-# SVD approach
+# Direct SVD approach
 X_train_centered = X_train - np.mean(X_train, axis=1)[:, None]
 dU, ds, dVt = np.linalg.svd(X_train_centered)
 print(dU.shape, ds.shape, dVt.shape)
@@ -132,7 +131,7 @@ fig_pca_modes_svd_1d.suptitle('First 5 PCA modes using SVD, in 1D')
 
 # Plot the energy captured by the PCA modes
 E = np.power(ds, 2)/np.sum(np.power(ds, 2))
-E_cumsum = np.pad(np.cumsum(E), 1)  # Padd with one zero for sake of the plot
+E_cumsum = np.pad(np.cumsum(E), 1)  # Pad with one zero for sake of the plot
 
 thresholds = {0.7: None, 0.8: None, 0.9: None, 0.95: None}
 for thresh, mode in thresholds.items():
@@ -151,9 +150,10 @@ ax_singular_values[0].plot(E_cumsum[:15], label='Cumulative energy')
 ax_singular_values[0].hlines([0.7, 0.8, 0.9, 0.95], 0, 15, linestyles='dashed', colors='r',
                           label='Energy level threshold')
 
-ax_singular_values[0].set_xlabel('j')
-ax_singular_values[0].set_ylabel('$\Sigma E_j$')
+ax_singular_values[0].set_xlabel('k')
+ax_singular_values[0].set_ylabel('$\Sigma E_k$')
 ax_singular_values[0].legend()
+
 # Plot a table containing the threshold values
 table_values = []
 for thresh, mode in thresholds.items():
@@ -163,7 +163,7 @@ table = plt.table(cellText=table_values,
                   bbox=[0, 0, 1, 1])
 ax_singular_values[1].add_table(table)
 ax_singular_values[1].axis('off')
-fig_singular_values.suptitle('Cumulative energy of first j PCA modes')
+fig_singular_values.suptitle('Cumulative energy of first k PCA modes')
 if save_figures:
     fig_singular_values.savefig(os.path.join(
         image_dir, 'cumulative-energy.png'))
@@ -270,8 +270,8 @@ pca_3d_ax.plot(pca_3d_centroids[WALKING][0],
                pca_3d_centroids[WALKING][2],
                label=WALKING, color='b', marker='o', markersize=12)
 
-print(pca_2d_centroids)
-print(pca_3d_centroids)
+print(f'2-PCA centroids: {pca_2d_centroids}')
+print(f'3-PCA centroids: {pca_3d_centroids}')
 
 ground_truth = [JUMPING, JUMPING, JUMPING, JUMPING, JUMPING,
                 RUNNING, RUNNING, RUNNING, RUNNING, RUNNING,
@@ -291,7 +291,6 @@ for m in movements:
         predicted_labels_2PCA.append(min(distances, key=distances.get))
 
 accuracy_2pca = accuracy_score(ground_truth, predicted_labels_2PCA)
-print(f'Accuracy of classifier in 2-PCA space: {accuracy_2pca}')
 
 # Loop through each sample, project to PCA-3 space, and classify
 for m in movements:
@@ -307,8 +306,9 @@ for m in movements:
         predicted_labels_3PCA.append(min(distances, key=distances.get))
 
 accuracy_3pca = accuracy_score(ground_truth, predicted_labels_3PCA)
-print(f'Accuracy of classifier in 3-PCA space: {accuracy_3pca}')
 
+# Now classify by measurement
+# (individual time step instead of a sample of 100 timesteps).
 ground_truth_train = []
 for i in range(500):
     ground_truth_train.append(JUMPING)
@@ -362,7 +362,7 @@ def classifier(k, ground_truth, input='train', samples=n_samples):
             if input == 'train':
                 sample = get_sample_data(m, i)
             else:
-                sample = testing_data[movement][i]
+                sample = testing_data[m][i]
             for j in range(n_timesteps):
                 pca_point = np.dot(du_k_T, sample[:, j])
                 # pca_point_centroid = [np.mean(pca_point[i, :]) for i in range(k)]
@@ -375,33 +375,51 @@ def classifier(k, ground_truth, input='train', samples=n_samples):
 
     return accuracy_kpca, predicted_labels_kPCA
 
-accuracies = []
+accuracies_training = []
 for k in range(1, 41):
     accuracy, _ = classifier(k, ground_truth_train, input='train',
                              samples=n_samples)
-    accuracies.append(accuracy)
+    accuracies_training.append(accuracy)
 
-print(accuracies)
+print(f'Training accuracy: {accuracies_training[0:7]}...')
 
 fig_accuracy, ax_accuracy = plt.subplots()
 k = np.arange(1, 41)
-ax_accuracy.plot(k[0:25], accuracies[0:25], label='Training')
+ax_accuracy.plot(k[0:25], accuracies_training[0:25], label='Training')
 
-accuracies = []
+accuracies_testing = []
 for k in range(1, 41):
     accuracy, _ = classifier(k, ground_truth_test, input='test',
                              samples=1)
-    accuracies.append(accuracy)
+    accuracies_testing.append(accuracy)
+
+print(f'Test accuracy: {accuracies_testing[0:7]}...')
 
 k = np.arange(1, 41)
-ax_accuracy.plot(k[0:25], accuracies[0:25], label='Test')
+ax_accuracy.plot(k[0:25], accuracies_testing[0:25], label='Test')
 
 ax_accuracy.legend()
 ax_accuracy.set_xlabel('k')
 ax_accuracy.set_ylabel('accuracy')
 fig_accuracy.suptitle('Classifier accuracy for various $k$')
-fig_accuracy.show()
+if save_figures:
+    fig_accuracy.savefig(os.path.join(image_dir, 'accuracy-graph.png'))
 
+accuracy_table_values = []
+for i in range(25):
+    accuracy_table_values.append([i + 1,
+                                  round(accuracies_training[i], 3),
+                                  round(accuracies_testing[i], 3)])
+
+fig_accuracy_table, ax_accuracy_table = plt.subplots()
+table = ax_accuracy_table.table(cellText=accuracy_table_values,
+                                colLabels=[r'$k$',
+                                           r'Accuracy on training set',
+                                           r'Accuracy on test set'],
+                                loc='center')
+ax_accuracy_table.axis('off')
+if save_figures:
+    fig_accuracy_table.savefig(os.path.join(image_dir, 'accuracy-table.png'))
 
 if not save_figures:
     plt.show()
