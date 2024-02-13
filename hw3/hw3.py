@@ -131,6 +131,64 @@ print(X_train_reconstructed.shape)
 # Plot the reconstructed digits
 plot_digits(X_train_reconstructed, 8, "First 64 reconstructed training images, using {n_modes} modes")
 
+
+# %% [markdown]
+# Write a function that selects a subset of particular digits
+
+# %%
+def get_all_samples_of_digit(d):
+    # d is one of the digits 0-9
+    training_indices = [i for i, k in enumerate(ytrainlabels) if k == d]
+    training_samples = np.empty((Xtraindata.shape[0], len(training_indices)))
+    print(training_samples.shape)
+    for out_idx, in_idx in enumerate(training_indices):
+        training_samples[:, out_idx] = Xtraindata[:, in_idx]
+
+    training_labels = [k for k in ytrainlabels if k == d]
+
+    testing_indices = [i for i, k in enumerate(ytestlabels) if k == d]
+    testing_samples = np.empty((Xtestdata.shape[0], len(testing_indices)))
+    print(testing_samples.shape)
+    for out_idx, in_idx in enumerate(testing_indices):
+        testing_samples[:, out_idx] = Xtestdata[:, in_idx]
+
+    testing_labels = [k for k in ytestlabels if k == d]
+
+    return training_samples, training_labels, testing_samples, testing_labels
+
+
+
+def get_all_samples_of_digits(digits):
+    # digits is an array of one or more digits
+    X_subtrain = np.empty((Xtraindata.shape[0], 0))
+    y_subtrain = np.empty((0))
+    X_subtest = np.empty((Xtraindata.shape[0], 0))
+    y_subtest = np.empty((0))
+
+    # Populate the arrays
+    for d in digits:
+        xx_subtrain, yy_subtrain, xx_subtest, yy_subtest = \
+            get_all_samples_of_digit(d)
+
+        X_subtrain = np.hstack([X_subtrain, xx_subtrain])
+        y_subtrain = np.hstack([y_subtrain, yy_subtrain])
+        X_subtest = np.hstack([X_subtest, xx_subtest])
+        y_subtest = np.hstack([y_subtest, yy_subtest])
+
+    return X_subtrain, y_subtrain, X_subtest, y_subtest
+        
+
+# for d in range(0, 10):
+#     X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digit(d)
+#     plot_digits(X_subtrain, 8, f'First 64 samples of digit {d}')
+
+X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digits([0, 1])
+print(X_subtrain.shape)
+print(y_subtrain.shape)
+print(X_subtest.shape)
+print(y_subtest.shape)
+    
+
 # %%
 
 # %%
