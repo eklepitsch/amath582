@@ -1,7 +1,6 @@
 # ---
 # jupyter:
 #   jupytext:
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -140,7 +139,7 @@ def get_all_samples_of_digit(d):
     # d is one of the digits 0-9
     training_indices = [i for i, k in enumerate(ytrainlabels) if k == d]
     training_samples = np.empty((Xtraindata.shape[0], len(training_indices)))
-    print(training_samples.shape)
+    #print(training_samples.shape)
     for out_idx, in_idx in enumerate(training_indices):
         training_samples[:, out_idx] = Xtraindata[:, in_idx]
 
@@ -148,7 +147,7 @@ def get_all_samples_of_digit(d):
 
     testing_indices = [i for i, k in enumerate(ytestlabels) if k == d]
     testing_samples = np.empty((Xtestdata.shape[0], len(testing_indices)))
-    print(testing_samples.shape)
+    #print(testing_samples.shape)
     for out_idx, in_idx in enumerate(testing_indices):
         testing_samples[:, out_idx] = Xtestdata[:, in_idx]
 
@@ -189,6 +188,80 @@ print(X_subtest.shape)
 print(y_subtest.shape)
     
 
+# %% [markdown]
+# Select digits 1,8 and project into 59-PCA space
+
 # %%
+X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digits([2, 7])
+
+print(n_modes)
+pca = PCA(n_components=n_modes)
+X_subtrain_projected = pca.fit_transform(X_subtrain.transpose())
+X_subtest_projected = pca.fit_transform(X_subtest.transpose())
+print(X_subtrain_projected.shape)
+print(X_subtest_projected.shape)
+print(y_subtrain.shape)
+print(y_subtest.shape)
+
+# %%
+# Apply Ridge classifier
+from sklearn.linear_model import RidgeClassifier
+#from sklearn.model_selection import cross_validate
+from sklearn.metrics import accuracy_score
+
+clf = RidgeClassifier()
+estimator = clf.fit(X_subtrain_projected, y_subtrain)
+pred = clf.predict(X_subtest_projected)
+
+accuracy = accuracy_score(y_subtest, pred)
+print(accuracy)
+
+
+# %% [markdown]
+# Create a function to do the above more generally
+
+# %%
+from sklearn.linear_model import RidgeClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import cross_validate, cross_val_score
+from sklearn.model_selection import GroupKFold
+
+def do_ridge_classification(digits, k_modes):
+    """ Perform Ridge classification on the given digits.
+    Args:
+        digits: list of digits to classify
+        k_modes: the number of modes in PCA space to use
+                 for the classifier
+    """
+    X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digits(digits)
+
+    pca = PCA(n_components=k_modes)
+    X_subtrain_projected = pca.fit_transform(X_subtrain.transpose())
+    X_subtest_projected = pca.fit_transform(X_subtest.transpose())
+
+    clf = RidgeClassifier()
+    estimator = clf.fit(X_subtrain_projected, y_subtrain)
+    pred = clf.predict(X_subtest_projected)
+
+    training_accuracies = cross_val_score(estimator, X_subtrain_projected, y_subtrain)
+    training_mean = np.mean(training_accuracies)
+    training_variance = np.var(training_accuracies)
+    
+    testing_accuracy = accuracy_score(y_subtest, pred)
+    return training_accuracies, testing_accuracy, training_mean, training_variance
+
+
+# %%
+train_accuracy, test_accuracy, mean, variance  = do_ridge_classification([1, 8], n_modes)
+print(f'Test accuracy for classication of [1, 8] ({n_modes}-PCA): {test_accuracy}')
+print(f'Training accuracy and variance: {mean}, {variance}')
+
+train_accuracy, test_accuracy, mean, variance = do_ridge_classification([3, 8], n_modes)
+print(f'Test accuracy for classication of [3, 8] ({n_modes}-PCA): {accuracy}')
+print(f'Training accuracy and variance: {mean}, {variance}')
+
+train_accuracy, test_accuracy, mean, variance = do_ridge_classification([2, 7], n_modes)
+print(f'Test accuracy for classication of [2, 7] ({n_modes}-PCA): {accuracy}')
+print(f'Training accuracy and variance: {mean}, {variance}')
 
 # %%
