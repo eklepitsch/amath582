@@ -219,7 +219,7 @@ def get_all_samples_of_digits(digits):
 
 # Select digits 1,8 and project into 59-PCA space:
 
-# In[9]:
+# In[32]:
 
 
 X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digits([1, 8])
@@ -227,7 +227,7 @@ X_subtrain, y_subtrain, X_subtest, y_subtest = get_all_samples_of_digits([1, 8])
 print(n_modes)
 pca = PCA(n_components=n_modes)
 X_subtrain_projected = pca.fit_transform(X_subtrain.transpose())
-X_subtest_projected = pca.fit_transform(X_subtest.transpose())
+X_subtest_projected = pca.transform(X_subtest.transpose())
 print(X_subtrain_projected.shape)
 print(X_subtest_projected.shape)
 print(y_subtrain.shape)
@@ -236,7 +236,7 @@ print(y_subtest.shape)
 
 # Apply Ridge classifier and do cross validation:
 
-# In[10]:
+# In[33]:
 
 
 from sklearn.linear_model import RidgeClassifier
@@ -261,7 +261,7 @@ ConfusionMatrixDisplay(cm, display_labels=[1, 8]).plot()
 
 # Create a function to apply a classifier more generally:
 
-# In[11]:
+# In[34]:
 
 
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
@@ -281,7 +281,7 @@ def do_classification(digits, classifier, k_modes, plot_cm=False):
 
     pca = PCA(n_components=k_modes)
     X_subtrain_projected = pca.fit_transform(X_subtrain.transpose())
-    X_subtest_projected = pca.fit_transform(X_subtest.transpose())
+    X_subtest_projected = pca.transform(X_subtest.transpose())
 
     estimator = classifier.fit(X_subtrain_projected, y_subtrain)
     pred = classifier.predict(X_subtest_projected)
@@ -291,15 +291,18 @@ def do_classification(digits, classifier, k_modes, plot_cm=False):
     training_mean = np.mean(training_accuracies)
     training_std = np.std(training_accuracies)
 
-    cm = confusion_matrix(y_subtrain, classifier.predict(X_subtrain_projected))
-    cm_display = ConfusionMatrixDisplay(cm, display_labels=digits)
+    cm_train = confusion_matrix(y_subtrain, classifier.predict(X_subtrain_projected))
+    cm_train_display = ConfusionMatrixDisplay(cm_train, display_labels=digits)
+    cm_test = confusion_matrix(y_subtest, classifier.predict(X_subtest_projected))
+    cm_test_display = ConfusionMatrixDisplay(cm_test, display_labels=digits)
     if plot_cm:
-        cm_display.plot()
+        cm_train_display.plot()
+        cm_test_display.plot()
     
-    return training_accuracies, testing_accuracy, training_mean, training_std, cm_display
+    return training_accuracies, testing_accuracy, training_mean, training_std, cm_train_display, cm_test_display
 
 
-# In[12]:
+# In[23]:
 
 
 from sklearn.linear_model import RidgeClassifier
@@ -309,7 +312,7 @@ test_accuracies = []
 training_accuracies = []
 training_stds = []
 
-_, test_accuracy, mean, std_dev, _  = do_classification([1, 8], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _, _  = do_classification([1, 8], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [1, 8] ({n_modes}-PCA): {test_accuracy}')
 print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
@@ -317,7 +320,7 @@ test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
 training_stds.append(std_dev)
 
-_, test_accuracy, mean, std_dev, _ = do_classification([3, 8], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _, _ = do_classification([3, 8], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [3, 8] ({n_modes}-PCA): {accuracy}')
 print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
@@ -325,7 +328,7 @@ test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
 training_stds.append(std_dev)
 
-_, test_accuracy, mean, std_dev, _ = do_classification([2, 7], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _, _ = do_classification([2, 7], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [2, 7] ({n_modes}-PCA): {accuracy}')
 print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
@@ -350,7 +353,7 @@ def float_formatter(x):
         return np.format_float_positional(x, precision=p)
 
 
-# In[14]:
+# In[35]:
 
 
 # Create a table with the binary classification results
@@ -377,7 +380,7 @@ if save_figures:
 
 # Use all the digits (muticlass classification)
 
-# In[ ]:
+# In[36]:
 
 
 from sklearn.linear_model import RidgeClassifier
@@ -390,9 +393,9 @@ test_accuracies = []
 training_accuracies = []
 training_stds = []
 
-fig_cm, ax_cm = plt.subplots(1, 3)
+fig_cm, ax_cm = plt.subplots(2, 3)
 
-_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm_train, cm_test  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           RidgeClassifier(),
                                                           n_modes)
 print(f'Test accuracy for Ridge classication of all digits ({n_modes}-PCA): {test_accuracy}')
@@ -403,10 +406,11 @@ test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
 training_stds.append(std_dev)
 
-ax_cm[0].set_title(f'Ridge')
-cm.plot(ax=ax_cm[0], colorbar=False)
+ax_cm[0][0].set_title(f'Ridge')
+cm_train.plot(ax=ax_cm[0][0], colorbar=False)
+cm_test.plot(ax=ax_cm[1][0], colorbar=False)
 
-_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm_train, cm_test  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           KNeighborsClassifier(),
                                                           n_modes)
 print(f'Test accuracy for KNN classication of all digits ({n_modes}-PCA): {test_accuracy}')
@@ -417,10 +421,11 @@ test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
 training_stds.append(std_dev)
 
-ax_cm[1].set_title(f'KNN')
-cm.plot(ax=ax_cm[1], colorbar=False)
+ax_cm[0][1].set_title(f'KNN')
+cm_train.plot(ax=ax_cm[0][1], colorbar=False)
+cm_test.plot(ax=ax_cm[1][1], colorbar=False)
 
-_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm_train, cm_test  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           LinearDiscriminantAnalysis(),
                                                           n_modes)
 print(f'Test accuracy for LDA classication of all digits ({n_modes}-PCA): {test_accuracy}')
@@ -430,18 +435,22 @@ test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
 training_stds.append(std_dev)
 
-ax_cm[2].set_title(f'LDA')
-cm.plot(ax=ax_cm[2], colorbar=False)
+ax_cm[0][2].set_title(f'LDA')
+cm_train.plot(ax=ax_cm[0][2], colorbar=False)
+cm_test.plot(ax=ax_cm[1][2], colorbar=False)
+
+ax_cm[0][0].set_ylabel(f'Train\n\nTrue label')
+ax_cm[1][0].set_ylabel(f'Test\n\nTrue label')
 
 fig_cm.suptitle('Confusion matrices for various classifiers')
-fig_cm.set_figwidth(13)
-fig_cm.set_figheight(4)
+fig_cm.set_figwidth(15)
+fig_cm.set_figheight(10)
 
 if save_figures:
     fig_cm.savefig(os.path.join(image_dir, 'multiclass-confusion-matrices.png'))
 
 
-# In[ ]:
+# In[37]:
 
 
 # Create a table with the multiclass classification results
