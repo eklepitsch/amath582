@@ -67,7 +67,8 @@ def plot_digits(XX, N, title):
       for j in range(N):
         ax[i,j].imshow(XX[:,(N)*i+j].reshape((28, 28)), cmap="Greys")
         ax[i,j].axis("off")
-    fig.suptitle(title, fontsize=24)
+    if title:
+        fig.suptitle(title, fontsize=24)
 
     return fig, ax
 
@@ -91,7 +92,7 @@ pca = PCA(n_components=16)
 pca.fit(Xtraindata.transpose())
 print(pca.components_.shape)
 
-fig, ax = plot_digits(pca.components_.transpose(), 4, "First 16 PCA modes")
+fig, ax = plot_digits(pca.components_.transpose(), 4, None)
 if save_figures:
     fig.savefig(os.path.join(image_dir, 'first-16-pca-modes.png'))
 
@@ -140,7 +141,7 @@ print(f'Number of PCA modes to capture {int(thresh*100)}% of energy in'
 
 ax_singular_values.legend()
 if save_figures:
-    fig_singular_values.savefig(os.path.join(image_dir, 'energy-analysis.png'))
+    fig_singular_values.savefig(os.path.join(image_dir, 'energy-analysis.png'), bbox_inches='tight')
 
 
 # Reconstruct some images using the first 59 PCA modes:
@@ -157,7 +158,7 @@ X_train_reconstructed = pca.inverse_transform(
 print(X_train_reconstructed.shape)
 
 # Plot the reconstructed digits
-fig, ax = plot_digits(X_train_reconstructed, 8, f'Reconstructed images, {n_modes} modes')
+fig, ax = plot_digits(X_train_reconstructed, 8, None)
 
 if save_figures:
     fig.savefig(os.path.join(image_dir, 'reconstructed-images.png'))
@@ -372,8 +373,7 @@ table.scale(1, 3)
 fig_results.set_figheight(2)
 
 if save_figures:
-    fig_results.savefig(os.path.join(image_dir, 'binary-classification-results.png'))
-
+    fig_results.savefig(os.path.join(image_dir, 'binary-classification-results.png'), bbox_inches='tight')
 
 # Use all the digits (muticlass classification)
 
@@ -464,7 +464,7 @@ table.scale(1, 3)
 fig_results.set_figheight(2)
 
 if save_figures:
-    fig_results.savefig(os.path.join(image_dir, 'multiclass-classification-results.png'))
+    fig_results.savefig(os.path.join(image_dir, 'multiclass-classification-results.png'), bbox_inches='tight')
 
 # In[ ]:
 
