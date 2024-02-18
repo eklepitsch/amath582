@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import os
+import matplotlib as mpl
+
+# Set to True to save the figures to .png files
+save_figures = True
+image_dir_name = 'images'
+image_dir = None
+if save_figures:
+    # Bump up the resolution (adds processing time)
+    mpl.rcParams['figure.dpi'] = 900
+    image_dir = os.path.join(os.curdir, image_dir_name)
+    if not os.path.exists(image_dir):
+        os.mkdir(image_dir)
+
 # Import the MNIST dataset.
 
 # In[1]:
@@ -55,6 +69,8 @@ def plot_digits(XX, N, title):
         ax[i,j].axis("off")
     fig.suptitle(title, fontsize=24)
 
+    return fig, ax
+
 
 # In[3]:
 
@@ -75,7 +91,9 @@ pca = PCA(n_components=16)
 pca.fit(Xtraindata.transpose())
 print(pca.components_.shape)
 
-plot_digits(pca.components_.transpose(), 4, "First 16 PCA modes")
+fig, ax = plot_digits(pca.components_.transpose(), 4, "First 16 PCA modes")
+if save_figures:
+    fig.savefig(os.path.join(image_dir, 'first-16-pca-modes.png'))
 
 
 # Cumulative energy analysis:
@@ -121,6 +139,8 @@ print(f'Number of PCA modes to capture {int(thresh*100)}% of energy in'
       f' training data: {n_modes}')
 
 ax_singular_values.legend()
+if save_figures:
+    fig_singular_values.savefig(os.path.join(image_dir, 'energy-analysis.png'))
 
 
 # Reconstruct some images using the first 59 PCA modes:
@@ -137,7 +157,10 @@ X_train_reconstructed = pca.inverse_transform(
 print(X_train_reconstructed.shape)
 
 # Plot the reconstructed digits
-plot_digits(X_train_reconstructed, 8, f'First 64 reconstructed training images, using {n_modes} modes')
+fig, ax = plot_digits(X_train_reconstructed, 8, f'Reconstructed images, {n_modes} modes')
+
+if save_figures:
+    fig.savefig(os.path.join(image_dir, 'reconstructed-images.png'))
 
 
 # Write a function that selects a subset of particular digits:
@@ -348,6 +371,9 @@ ax_results.axis('off')
 table.scale(1, 3)
 fig_results.set_figheight(2)
 
+if save_figures:
+    fig_results.savefig(os.path.join(image_dir, 'binary-classification-results.png'))
+
 
 # Use all the digits (muticlass classification)
 
@@ -408,8 +434,11 @@ ax_cm[2].set_title(f'LDA')
 cm.plot(ax=ax_cm[2], colorbar=False)
 
 fig_cm.suptitle('Confusion matrices for various classifiers')
-fig_cm.set_figwidth(15)
+fig_cm.set_figwidth(13)
 fig_cm.set_figheight(4)
+
+if save_figures:
+    fig_cm.savefig(os.path.join(image_dir, 'multiclass-confusion-matrices.png'))
 
 
 # In[16]:
@@ -434,6 +463,8 @@ ax_results.axis('off')
 table.scale(1, 3)
 fig_results.set_figheight(2)
 
+if save_figures:
+    fig_results.savefig(os.path.join(image_dir, 'multiclass-classification-results.png'))
 
 # In[ ]:
 
