@@ -252,7 +252,7 @@ print(f'Test accuracy: {accuracy}')
 score = cross_val_score(estimator, X_subtrain_projected, y_subtrain)
 print(f'Training accuracies, cross validation: {score}')
 print(f'Training accuracy, mean: {np.mean(score)}')
-print(f'Training accuracy, std dev: {np.var(score)}')
+print(f'Training accuracy, std dev: {np.std(score)}')
 
 cm = confusion_matrix(y_subtrain, clf.predict(X_subtrain_projected))
 ConfusionMatrixDisplay(cm, display_labels=[1, 8]).plot()
@@ -288,14 +288,14 @@ def do_classification(digits, classifier, k_modes, plot_cm=False):
 
     training_accuracies = cross_val_score(estimator, X_subtrain_projected, y_subtrain)
     training_mean = np.mean(training_accuracies)
-    training_variance = np.var(training_accuracies)
+    training_std = np.std(training_accuracies)
 
     cm = confusion_matrix(y_subtrain, classifier.predict(X_subtrain_projected))
     cm_display = ConfusionMatrixDisplay(cm, display_labels=digits)
     if plot_cm:
         cm_display.plot()
     
-    return training_accuracies, testing_accuracy, training_mean, training_variance, cm_display
+    return training_accuracies, testing_accuracy, training_mean, training_std, cm_display
 
 
 # In[12]:
@@ -306,31 +306,31 @@ from sklearn.linear_model import RidgeClassifier
 digits = ['1, 8', '3, 8', '2, 7']
 test_accuracies = []
 training_accuracies = []
-training_variances = []
+training_stds = []
 
-_, test_accuracy, mean, variance, _  = do_classification([1, 8], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _  = do_classification([1, 8], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [1, 8] ({n_modes}-PCA): {test_accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
-_, test_accuracy, mean, variance, _ = do_classification([3, 8], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _ = do_classification([3, 8], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [3, 8] ({n_modes}-PCA): {accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
-_, test_accuracy, mean, variance, _ = do_classification([2, 7], RidgeClassifier(), n_modes)
+_, test_accuracy, mean, std_dev, _ = do_classification([2, 7], RidgeClassifier(), n_modes)
 print(f'Test accuracy for classication of [2, 7] ({n_modes}-PCA): {accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
 
 # In[13]:
@@ -354,17 +354,17 @@ def float_formatter(x):
 
 # Create a table with the binary classification results
 results_table = []
-for digits, train_mean, train_var, test_accuracy in zip(digits,
+for digits, train_mean, train_std, test_accuracy in zip(digits,
                                                         training_accuracies,
-                                                        training_variances,
+                                                        training_stds,
                                                         test_accuracies):
     results_table.append([digits, float_formatter(train_mean),
-                          float_formatter(train_var), float_formatter(test_accuracy)])
+                          float_formatter(train_std), float_formatter(test_accuracy)])
 
 fig_results, ax_results = plt.subplots()
 table = ax_results.table(cellText=results_table, colLabels=['Digits to classify', 
                                                             'Training accuracy (mean)', 
-                                                            'Training variance', 
+                                                            'Training std dev', 
                                                             'Test accuracy'],
                         loc='center')
 ax_results.axis('off')
@@ -377,7 +377,7 @@ if save_figures:
 
 # Use all the digits (muticlass classification)
 
-# In[15]:
+# In[ ]:
 
 
 from sklearn.linear_model import RidgeClassifier
@@ -388,47 +388,47 @@ import matplotlib.pyplot as plt
 classifiers = ['Ridge', 'KNN', 'LDA']
 test_accuracies = []
 training_accuracies = []
-training_variances = []
+training_stds = []
 
 fig_cm, ax_cm = plt.subplots(1, 3)
 
-_, test_accuracy, mean, variance, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           RidgeClassifier(),
                                                           n_modes)
 print(f'Test accuracy for Ridge classication of all digits ({n_modes}-PCA): {test_accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 print('\n')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
 ax_cm[0].set_title(f'Ridge')
 cm.plot(ax=ax_cm[0], colorbar=False)
 
-_, test_accuracy, mean, variance, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           KNeighborsClassifier(),
                                                           n_modes)
 print(f'Test accuracy for KNN classication of all digits ({n_modes}-PCA): {test_accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 print('\n')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
 ax_cm[1].set_title(f'KNN')
 cm.plot(ax=ax_cm[1], colorbar=False)
 
-_, test_accuracy, mean, variance, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+_, test_accuracy, mean, std_dev, cm  = do_classification([0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
                                                           LinearDiscriminantAnalysis(),
                                                           n_modes)
 print(f'Test accuracy for LDA classication of all digits ({n_modes}-PCA): {test_accuracy}')
-print(f'Training accuracy and variance: {mean}, {variance}')
+print(f'Training accuracy and std dev: {mean}, {std_dev}')
 
 test_accuracies.append(test_accuracy)
 training_accuracies.append(mean)
-training_variances.append(variance)
+training_stds.append(std_dev)
 
 ax_cm[2].set_title(f'LDA')
 cm.plot(ax=ax_cm[2], colorbar=False)
@@ -441,22 +441,22 @@ if save_figures:
     fig_cm.savefig(os.path.join(image_dir, 'multiclass-confusion-matrices.png'))
 
 
-# In[16]:
+# In[ ]:
 
 
 # Create a table with the multiclass classification results
 results_table = []
-for classifier, train_mean, train_var, test_accuracy in zip(classifiers,
+for classifier, train_mean, std_dev, test_accuracy in zip(classifiers,
                                                             training_accuracies,
-                                                            training_variances,
+                                                            training_stds,
                                                             test_accuracies):
     results_table.append([classifier, float_formatter(train_mean),
-                          float_formatter(train_var), float_formatter(test_accuracy)])
+                          float_formatter(std_dev), float_formatter(test_accuracy)])
 
 fig_results, ax_results = plt.subplots()
 table = ax_results.table(cellText=results_table, colLabels=['Classifier', 
                                                             'Training accuracy (mean)', 
-                                                            'Training variance', 
+                                                            'Training std dev', 
                                                             'Test accuracy'],
                         loc='center')
 ax_results.axis('off')
