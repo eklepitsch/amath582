@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[54]:
+# In[1]:
 
 
 import numpy as np
@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import tqdm
 
 
-# In[55]:
+# In[2]:
 
 
 import torchvision
@@ -110,45 +110,36 @@ plot_images(train_dataset.data[:64], 8, "First 64 Training Images" )
     
 
 
-# In[52]:
+# In[4]:
 
 
 #Define your (As Cool As It Gets) Fully Connected Neural Network 
 class ACAIGFCN(nn.Module):
     #Initialize model layers, add additional arguments to adjust
-    def __init__(self, input_dim, output_dim): 
+    def __init__(self, input_dim, output_dim, n_layers, layers_size): 
         super(ACAIGFCN, self).__init__()
         #Define the network layer(s) and activation function(s)
-        self.layer1 = torch.nn.Linear(input_dim, 1000)
-        self.layer2 = torch.nn.Linear(1000, 1000)
-        self.layer3 = torch.nn.Linear(1000, 2000)
-        self.layer4 = torch.nn.Linear(2000, 1000)
-        self.layer5 = torch.nn.Linear(1000, output_dim)
-
-        #self.layer1 = torch.nn.Linear(input_dim, output_dim)
+        self.linears = torch.nn.ModuleList([torch.nn.Linear(input_dim, layers_size)])
+        self.linears.extend([torch.nn.Linear(layers_size, layers_size) for i in range(1, n_layers-1)]) 
+        self.linears.extend([torch.nn.Linear(layers_size, output_dim)])
  
     def forward(self, input):
         #Define how your model propagates the input through the network
-        x = F.relu(self.layer1(input))
-        x = F.relu(self.layer2(x))
-        x = F.relu(self.layer3(x))
-        x = F.relu(self.layer4(x))
-        x = self.layer5(x)
-
-        #x = self.layer1(input)
+        x = input
+        for l in self.linears:
+            x = F.relu(l(x))
         return x
 
 
-# In[ ]:
+# In[24]:
 
 
 # Initialize neural network model with input, output and hidden layer dimensions
-model = ACAIGFCN(input_dim = 784, output_dim = 10) #... add more parameters
+model = ACAIGFCN(input_dim = 784, output_dim = 10, n_layers=2, layers_size=100) #... add more parameters
                 
 # Define the learning rate and epochs number
-learning_rate = 0.01
-epochs = 50
-
+learning_rate = 0.1
+epochs = 20
 
 train_loss_list = np.zeros((epochs,))
 validation_accuracy_list = np.zeros((epochs,))
@@ -218,36 +209,37 @@ for epoch in tqdm.trange(epochs):
     print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
     print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
     print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
-    print(f"Elapsed training time: {time.time() - start_time} seconds")
+    print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
 
 
 
-# In[51]:
+# In[25]:
 
 
 # Plot training loss and validation accuracy throughout the training epochs
-fig, ax = plt.subplots(1, 2)
+fig, ax = plt.subplots(2, 1)
 ax[0].plot(np.arange(1, len(train_loss_list) + 1), train_loss_list)
-ax[0].set_title('Training loss')
-ax[0].set_xlabel('Epoch')
-ax[0].set_ylabel('Loss')
+ax[0].set_ylabel('Training Loss')
 
 ax[1].plot(np.arange(1, len(train_loss_list) + 1), validation_accuracy_list * 100)
-ax[1].set_title('Validation Accuracy')
 ax[1].set_xlabel('Epoch')
-ax[1].set_ylabel('Accuracy (%)')
+ax[1].set_ylabel('Validation Accuracy (%)')
 
-fig.set_figwidth(10)
+fig.set_figwidth(12)
+fig.set_figheight(6)
 
 
-# In[7]:
+# In[26]:
 
 
 #Calculate accuracy on test set
 
 # Telling PyTorch we aren't passing inputs to network for training purpose
+start_time = time.time()
 with torch.no_grad():
     
+    batch_acc_list = np.zeros((num_test_batches,))
+    i = 0
     for test_features, test_labels in test_batches:
 
         model.eval()
@@ -256,9 +248,16 @@ with torch.no_grad():
 
          # Compute validation outputs (targets) 
          # and compute accuracy 
+        test_outputs = model(test_features)
+        correct = (torch.argmax(test_outputs, dim=1) == test_labels).type(torch.FloatTensor)
+        batch_acc_list[i] = correct.mean()
+        i = i + 1
     
     # Compute total (mean) accuracy
     # Report total (mean) accuracy, can also compute std based on batches
+    print(f"Test Accuracy: {np.mean(batch_acc_list)*100}%")
+    print(f"Test Std Dev: {np.std(batch_acc_list)}")
+    print(f"Elapsed test time: {(time.time() - start_time)/60} minutes")
 
 
 # In[ ]:
