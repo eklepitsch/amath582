@@ -19,9 +19,10 @@ import matplotlib.pyplot as plt
 import time
 from torch.utils.data import DataLoader, Subset
 from sklearn.model_selection import train_test_split
+from enum import Enum, auto
 
 
-# In[62]:
+# In[3]:
 
 
 # Use the following code to load and normalize the dataset for training and testing
@@ -110,7 +111,7 @@ print(f"# Test batches: {num_test_batches}")
     
 
 
-# In[58]:
+# In[4]:
 
 
 #Define your (As Cool As It Gets) Fully Connected Neural Network 
@@ -131,7 +132,7 @@ class ACAIGFCN(nn.Module):
         return x
 
 
-# In[ ]:
+# In[5]:
 
 
 # Initialize neural network model with input, output and hidden layer dimensions
@@ -213,23 +214,34 @@ for epoch in tqdm.trange(epochs):
 
 
 
-# In[60]:
+# In[6]:
 
 
 # Plot training loss and validation accuracy throughout the training epochs
 fig, ax = plt.subplots(2, 1)
-ax[0].plot(np.arange(1, len(train_loss_list) + 1), train_loss_list)
-ax[0].set_ylabel('Training Loss')
 
-ax[1].plot(np.arange(1, len(train_loss_list) + 1), validation_accuracy_list * 100)
-ax[1].set_xlabel('Epoch')
-ax[1].set_ylabel('Validation Accuracy (%)')
+def plot_loss_and_accuracy(loss, accuracy, label):
+    ax[0].plot(np.arange(1, len(loss) + 1), loss, label=label)
+    ax[0].set_ylabel('Training Loss')
+    ax[0].legend()
+    
+    ax[1].plot(np.arange(1, len(accuracy) + 1), accuracy * 100, label=label)
+    ax[1].set_xlabel('Epoch')
+    ax[1].set_ylabel('Validation Accuracy (%)')
+    #ax[1].legend()
+    
+    fig.set_figwidth(12)
+    fig.set_figheight(6)
 
-fig.set_figwidth(12)
-fig.set_figheight(6)
+
+# In[ ]:
 
 
-# In[61]:
+plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, 'Baseline (SGD)')
+fig
+
+
+# In[8]:
 
 
 #Calculate accuracy on test set
@@ -260,47 +272,69 @@ with torch.no_grad():
     print(f"Elapsed test time: {(time.time() - start_time)/60} minutes")
 
 
-# In[ ]:
+# In[9]:
 
 
-# Define a function to to all the above more generally
+# Create a function to do the above more generally
 
-train_batch_size = 512 
-test_batch_size  = 256
-
-# Define dataloader objects that help to iterate over batches and samples for
-# training, validation and testing
-train_batches = DataLoader(train_split, batch_size=train_batch_size, shuffle=True)
-val_batches = DataLoader(val_split, batch_size=train_batch_size, shuffle=True)
-test_batches = DataLoader(test_dataset, batch_size=test_batch_size, shuffle=True)
-                                           
-num_train_batches=len(train_batches)
-num_val_batches=len(val_batches)
-num_test_batches=len(test_batches)
-
-def train_and_test_model(train_batch_size=512,
-                         test_batch_size=256,
-                         input_dim=784,
-                         output_dim=10,
-                         n_layers=2,
-                         layers_size=50):
-    model = ACAIGFCN(input_dim = 784, output_dim = 10, n_layers=2, layers_size=50)
-                
-    # Define the learning rate and epochs number
+# Capture the baseline parameters in a class
+class BaselineParams:
+    input_dim = 784
+    output_dim = 10
+    n_layers = 2
+    layers_size = 50
+    train_batch_size = 512
+    test_batch_size = 256
     learning_rate = 0.05
     epochs = 20
     
+
+class LossFn(Enum):
+    CROSS_ENTROPY = auto()
+
+
+class Optimizer(str, Enum):
+    SGD = 'SGD'
+    RMSPROP = 'RMSProp'
+    ADAM = 'Adam'
+
+
+def train_and_test_model(epochs = BaselineParams.epochs,
+                         learning_rate=BaselineParams.learning_rate,
+                         loss_function=LossFn.CROSS_ENTROPY,
+                         opt=Optimizer.SGD):
+
+    # Initialize the baseline neural network model
+    model = ACAIGFCN(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size)
+
+    train_batches = DataLoader(train_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
+    val_batches = DataLoader(val_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
+    test_batches = DataLoader(test_dataset, batch_size=BaselineParams.test_batch_size, shuffle=True)
+                                           
+    num_train_batches=len(train_batches)
+    num_val_batches=len(val_batches)
+    num_test_batches=len(test_batches)
+
     train_loss_list = np.zeros((epochs,))
     validation_accuracy_list = np.zeros((epochs,))
     validation_std_list = np.zeros((epochs,))
     
     # Define loss function  and optimizer
-    loss_func = torch.nn.CrossEntropyLoss() # Use Cross Entropy loss from torch.nn 
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate) # Use optimizers from torch.optim
-    
+    loss_func = None
+    optimizer = None
+    if loss_function == LossFn.CROSS_ENTROPY:
+        loss_func = torch.nn.CrossEntropyLoss() 
+
+    if opt == Optimizer.SGD: 
+        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
+    elif opt == Optimizer.RMSPROP:
+        optimizer = torch.optim.RMSprop(model.parameters(), lr=learning_rate)
+    elif opt == Optimizer.ADAM:
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     
     # Iterate over epochs, batches with progress bar and train+ validate the ACAIGFCN
     # Track the loss and validation accuracy
+    print(f"Reporting statistics for optimizer: {opt.value}")
     start_time = time.time()
     for epoch in tqdm.trange(epochs):
     
@@ -352,12 +386,61 @@ def train_and_test_model(train_batch_size=512,
         validation_accuracy_list[epoch] = np.mean(batch_acc_list)
         validation_std_list[epoch] = np.std(batch_acc_list)
                 
-                
         # Record accuracy for the epoch; print training loss, validation accuracy
         # Record standard deviation too
+        # if epoch % 5 == 0 or epoch == epochs-1:
         print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
         print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
         print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
         print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
+
+    plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=opt.value)
+
+    # Compute test accuracy
+    with torch.no_grad(): 
+        batch_acc_list = np.zeros((num_test_batches,))
+        i = 0
+        for test_features, test_labels in test_batches:
+    
+            model.eval()
+            # Reshape test images into a vector
+            test_features = test_features.reshape(-1, 28*28)
+    
+             # Compute validation outputs (targets) 
+             # and compute accuracy 
+            test_outputs = model(test_features)
+            correct = (torch.argmax(test_outputs, dim=1) == test_labels).type(torch.FloatTensor)
+            batch_acc_list[i] = correct.mean()
+            i = i + 1
+        
+        # Compute total (mean) accuracy
+        # Report total (mean) accuracy, can also compute std based on batches
+        test_accuracy = np.mean(batch_acc_list)
+        test_std = np.std(batch_acc_list)
+        print(f"Test Accuracy: {test_accuracy*100}%")
+        print(f"Test Std Dev: {test_std}")
+    
+    return train_loss_list, validation_accuracy_list, validation_std_list, test_accuracy, test_std
+
+
+# In[ ]:
+
+
+# Hyperparameter tuning
+SGD_loss, SGD_train_acc, SGD_train_std, SGD_test_acc, SGD_test_std = train_and_test_model(opt=Optimizer.SGD)
+RMS_loss, RMS_train_acc, RMS_train_std, RMS_test_acc, RMS_test_std = train_and_test_model(opt=Optimizer.RMSPROP)
+ADAM_loss, ADAM_train_acc, ADAM_train_std, ADAM_test_acc, ADAM_test_std = train_and_test_model(opt=Optimizer.ADAM)
+fig
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
+
+
 
 
