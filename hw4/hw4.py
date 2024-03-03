@@ -9,6 +9,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import tqdm
+import random
 
 
 # In[2]:
@@ -56,7 +57,7 @@ val_split = Subset(train_dataset, val_indices)
 
 
 # set batches sizes
-train_batch_size = 512 #Define train batch size
+train_batch_size = 128 #Define train batch size
 test_batch_size  = 256 #Define test batch size (can be larger than train batch size)
 
 
@@ -135,12 +136,90 @@ class ACAIGFCN(nn.Module):
 # In[5]:
 
 
+# Add dropout
+class ACAIGFCN_dropout(nn.Module):
+    #Initialize model layers, add additional arguments to adjust
+    def __init__(self, input_dim, output_dim, n_layers, layers_size): 
+        super(ACAIGFCN_dropout, self).__init__()
+        #Define the network layer(s) and activation function(s)
+        self.linears = torch.nn.ModuleList([torch.nn.Linear(input_dim, layers_size)])
+        for i in range(1, n_layers-1):
+            # Add dropout in the hidden layers
+            self.linears.extend([torch.nn.Dropout(0.2)])
+            self.linears.extend([torch.nn.Linear(layers_size, layers_size)])
+        self.linears.extend([torch.nn.Linear(layers_size, output_dim)])
+ 
+    def forward(self, input):
+        #Define how your model propagates the input through the network
+        x = input
+        for l in self.linears:
+            x = F.relu(l(x))
+        return x
+
+
+# In[6]:
+
+
+# Add initialization
+class ACAIGFCN_init(nn.Module):
+    #Initialize model layers, add additional arguments to adjust
+    def __init__(self, input_dim, output_dim, n_layers, layers_size, initializer=torch.nn.init.normal_): 
+        super(ACAIGFCN_init, self).__init__()
+        #Define the network layer(s) and activation function(s)
+        self.linears = torch.nn.ModuleList([torch.nn.Linear(input_dim, layers_size)])
+        self.linears.extend([torch.nn.Linear(layers_size, layers_size) for i in range(1, n_layers-1)]) 
+        self.linears.extend([torch.nn.Linear(layers_size, output_dim)])
+
+        # Add initialization
+        for l in self.linears:
+            initializer(l.weight)
+ 
+    def forward(self, input):
+        #Define how your model propagates the input through the network
+        x = input
+        for l in self.linears:
+            x = F.relu(l(x))
+        return x
+
+
+# In[7]:
+
+
+# Add batch normalization
+class ACAIGFCN_batch_norm(nn.Module):
+    #Initialize model layers, add additional arguments to adjust
+    def __init__(self, input_dim, output_dim, n_layers, layers_size): 
+        super(ACAIGFCN_batch_norm, self).__init__()
+        #Define the network layer(s) and activation function(s)
+        self.linears = torch.nn.ModuleList([torch.nn.Linear(input_dim, layers_size)])
+        for i in range(1, n_layers-1):
+            # Add batch normalization after each layer
+            self.linears.extend([torch.nn.BatchNorm1d(layers_size)])
+            self.linears.extend([torch.nn.Linear(layers_size, layers_size)])
+        self.linears.extend([torch.nn.BatchNorm1d(layers_size)])
+        self.linears.extend([torch.nn.Linear(layers_size, output_dim)])
+ 
+    def forward(self, input):
+        #Define how your model propagates the input through the network
+        x = input
+        for l in self.linears:
+            x = F.relu(l(x))
+        return x
+
+
+# In[8]:
+
+
+# Set the random seed to ensure reproducible results
+torch.manual_seed(0)
+random.seed(0)
+
 # Initialize neural network model with input, output and hidden layer dimensions
 model = ACAIGFCN(input_dim = 784, output_dim = 10, n_layers=2, layers_size=50) #... add more parameters
                 
 # Define the learning rate and epochs number
-learning_rate = 0.05
-epochs = 20
+learning_rate = 0.005
+epochs = 30
 
 train_loss_list = np.zeros((epochs,))
 validation_accuracy_list = np.zeros((epochs,))
@@ -214,7 +293,7 @@ for epoch in tqdm.trange(epochs):
 
 
 
-# In[6]:
+# In[9]:
 
 
 # Plot training loss and validation accuracy throughout the training epochs
@@ -234,14 +313,22 @@ def plot_loss_and_accuracy(loss, accuracy, label):
     fig.set_figheight(6)
 
 
-# In[ ]:
+# In[10]:
 
 
 plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, 'Baseline (SGD)')
 fig
 
 
-# In[8]:
+# In[11]:
+
+
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 900
+fig.savefig('images/baseline-learning-curves.png')
+
+
+# In[12]:
 
 
 #Calculate accuracy on test set
@@ -272,7 +359,7 @@ with torch.no_grad():
     print(f"Elapsed test time: {(time.time() - start_time)/60} minutes")
 
 
-# In[9]:
+# In[13]:
 
 
 # Create a function to do the above more generally
@@ -282,11 +369,11 @@ class BaselineParams:
     input_dim = 784
     output_dim = 10
     n_layers = 2
-    layers_size = 50
-    train_batch_size = 512
+    layers_size = 100
+    train_batch_size = 128
     test_batch_size = 256
-    learning_rate = 0.05
-    epochs = 20
+    learning_rate = 0.005
+    epochs = 30
     
 
 class LossFn(Enum):
@@ -302,10 +389,25 @@ class Optimizer(str, Enum):
 def train_and_test_model(epochs = BaselineParams.epochs,
                          learning_rate=BaselineParams.learning_rate,
                          loss_function=LossFn.CROSS_ENTROPY,
-                         opt=Optimizer.SGD):
+                         opt=Optimizer.SGD,
+                         dropout=False,
+                         init=False,
+                         initializer=None,
+                         batch_norm=False):
+    # Set the random seed to ensure reproducible results
+    torch.manual_seed(0)
+    random.seed(0)
 
     # Initialize the baseline neural network model
-    model = ACAIGFCN(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size)
+    if not dropout and not init and not batch_norm:
+        model = ACAIGFCN(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size)
+    elif dropout and not init and not batch_norm:
+        model = ACAIGFCN_dropout(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size)
+    elif not dropout and init and initializer is not None and not batch_norm:
+        model = ACAIGFCN_init(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size, initializer=initializer)
+    elif not dropout and not init and batch_norm:
+        model = ACAIGFCN_batch_norm(input_dim = BaselineParams.input_dim, output_dim = BaselineParams.output_dim, n_layers = BaselineParams.n_layers, layers_size = BaselineParams.layers_size)
+        
 
     train_batches = DataLoader(train_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
     val_batches = DataLoader(val_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
@@ -334,7 +436,7 @@ def train_and_test_model(epochs = BaselineParams.epochs,
     
     # Iterate over epochs, batches with progress bar and train+ validate the ACAIGFCN
     # Track the loss and validation accuracy
-    print(f"Reporting statistics for optimizer: {opt.value}")
+    print(f"Reporting statistics for optimizer: {opt.value}, lr = {learning_rate}, dropout={dropout}, initializer={initializer}, batch_norm={batch_norm}")
     start_time = time.time()
     for epoch in tqdm.trange(epochs):
     
@@ -388,13 +490,16 @@ def train_and_test_model(epochs = BaselineParams.epochs,
                 
         # Record accuracy for the epoch; print training loss, validation accuracy
         # Record standard deviation too
-        # if epoch % 5 == 0 or epoch == epochs-1:
-        print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
-        print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
-        print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
-        print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
+        if epoch == epochs-1:
+            print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
+            print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
+            print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
+            print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
 
-    plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=opt.value)
+    if init:
+        plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=f"initializer = {initializer}")
+    else:
+        plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=f"{opt.value}, lr = {learning_rate}")
 
     # Compute test accuracy
     with torch.no_grad(): 
@@ -423,20 +528,56 @@ def train_and_test_model(epochs = BaselineParams.epochs,
     return train_loss_list, validation_accuracy_list, validation_std_list, test_accuracy, test_std
 
 
-# In[ ]:
+# In[14]:
 
 
 # Hyperparameter tuning
-SGD_loss, SGD_train_acc, SGD_train_std, SGD_test_acc, SGD_test_std = train_and_test_model(opt=Optimizer.SGD)
-RMS_loss, RMS_train_acc, RMS_train_std, RMS_test_acc, RMS_test_std = train_and_test_model(opt=Optimizer.RMSPROP)
-ADAM_loss, ADAM_train_acc, ADAM_train_std, ADAM_test_acc, ADAM_test_std = train_and_test_model(opt=Optimizer.ADAM)
+fig, ax = plt.subplots(2, 1)
+SGD_loss_1, SGD_train_acc_1, SGD_train_std_1, SGD_test_acc_1, SGD_test_std_1 = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.001)
+SGD_loss_5, SGD_train_acc_5, SGD_train_std_5, SGD_test_acc_5, SGD_test_std_5 = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005)
+SGD_loss_10, SGD_train_acc_10, SGD_train_std_10, SGD_test_acc_10, SGD_test_std_10 = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.01)
+RMS_loss_1, RMS_train_acc_1, RMS_train_std_1, RMS_test_acc_1, RMS_test_std_1 = train_and_test_model(opt=Optimizer.RMSPROP, learning_rate=0.001)
+RMS_loss_5, RMS_train_acc_5, RMS_train_std_5, RMS_test_acc_5, RMS_test_std_5 = train_and_test_model(opt=Optimizer.RMSPROP, learning_rate=0.005)
+RMS_loss_10, RMS_train_acc_10, RMS_train_std_10, RMS_test_acc_10, RMS_test_std_10 = train_and_test_model(opt=Optimizer.RMSPROP, learning_rate=0.01)
+ADAM_loss_1, ADAM_train_acc_1, ADAM_train_std_1, ADAM_test_acc_1, ADAM_test_std_1 = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001)
+ADAM_loss_5, ADAM_train_acc_5, ADAM_train_std_5, ADAM_test_acc_5, ADAM_test_std_5 = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.005)
+ADAM_loss_10, ADAM_train_acc_10, ADAM_train_std_10, ADAM_test_acc_10, ADAM_test_std_10 = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.01)
 fig
 
 
-# In[ ]:
+# In[15]:
 
 
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 900
+fig.savefig('images/optimizer-learning-curves.png')
 
+
+# In[16]:
+
+
+# Rerun the baseline with dropout
+fig, ax = plt.subplots(2, 1)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, dropout=True)
+
+
+# In[17]:
+
+
+# Rerun the baseline with different initializers
+fig, ax = plt.subplots(2, 1)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, init=True, initializer=torch.nn.init.normal_)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, init=True, initializer=torch.nn.init.xavier_normal_)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, init=True, initializer=torch.nn.init.kaiming_uniform_)
+
+
+# In[18]:
+
+
+# Run the baseline with batch normalization
+fig, ax = plt.subplots(2, 1)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, batch_norm=True)
+_, _, _, _, _ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, batch_norm=True)
 
 
 # In[ ]:
