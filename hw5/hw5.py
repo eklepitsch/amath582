@@ -106,7 +106,7 @@ print(f"# Test batches: {num_test_batches}")
     
 
 
-# In[6]:
+# In[104]:
 
 
 # Define baseline FCN
@@ -122,16 +122,17 @@ class FCN(nn.Module):
     def forward(self, input):
         #Define how your model propagates the input through the network
         x = input
-        for l in self.linears:
+        for l in self.linears[:-1]:
             x = F.relu(l(x))
+        x = self.linears[-1](x)
         return x
 
 
-# In[7]:
+# In[111]:
 
 
 # Find the size of the model
-model = FCN(input_dim = 784, output_dim = 10, n_layers=2, layers_size=100)
+model = FCN(input_dim = 784, output_dim = 10, n_layers=2, layers_size=200)
 
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Number of parameters: {total_params}")
@@ -350,7 +351,7 @@ total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Number of parameters: {total_params}")
 
 
-# In[86]:
+# In[109]:
 
 
 # Plot training loss and validation accuracy throughout the training epochs
@@ -370,7 +371,7 @@ def plot_loss_and_accuracy(loss, accuracy, label):
     fig.set_figheight(6)
 
 
-# In[32]:
+# In[112]:
 
 
 # Create a function to train the NN generally
@@ -379,12 +380,12 @@ def plot_loss_and_accuracy(loss, accuracy, label):
 class BaselineParams:
     input_dim = 784
     output_dim = 10
-    n_layers = 3
-    layers_size = 60
-    train_batch_size = 1024
+    n_layers = 2
+    layers_size = 100
+    train_batch_size = 64
     test_batch_size = 128
     learning_rate = 0.005
-    epochs = 30
+    epochs = 15
     
 
 class LossFn(Enum):
@@ -504,11 +505,11 @@ def train_and_test_model(epochs = BaselineParams.epochs,
                 
         # Record accuracy for the epoch; print training loss, validation accuracy
         # Record standard deviation too
-        #if epoch == epochs-1:
-        print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
-        print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
-        print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
-        print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
+        if epoch == epochs-1:
+            print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
+            print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
+            print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
+            print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
 
     if init:
         plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=f"initializer = {initializer}")
@@ -542,27 +543,26 @@ def train_and_test_model(epochs = BaselineParams.epochs,
     return train_loss_list, validation_accuracy_list, validation_std_list, test_accuracy, test_std
 
 
-# In[33]:
+# In[113]:
 
 
-#_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=2, layers_size=60, plot_label='FCN 50K (1)')
-#_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=3, layers_size=56, plot_label='FCN 50K (2)')
-_,_,_,_,_ = train_and_test_model(opt=Optimizer.SGD, learning_rate=0.005, n_layers=2, layers_size=100, plot_label='FCN 100K')
-#_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=2, layers_size=200, plot_label='FCN 200K')
+_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=2, layers_size=60, plot_label='FCN 50K')
+_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=2, layers_size=110, plot_label='FCN 100K')
+_,_,_,_,_ = train_and_test_model(opt=Optimizer.ADAM, learning_rate=0.001, n_layers=2, layers_size=200, plot_label='FCN 200K')
 
 
-# In[1]:
+# In[114]:
 
 
 fig
 
 
-# In[40]:
+# In[115]:
 
 
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 900
-fig.savefig('images/FCN-50K-2-learning-curves.png')
+fig.savefig('images/FCN-learning-curves.png')
 
 
 # In[90]:
@@ -759,9 +759,10 @@ mpl.rcParams['figure.dpi'] = 900
 fig.savefig('images/CNN-learning-curves.png')
 
 
-# In[98]:
+# In[99]:
 
 
+# Plot the training time or test accuracy vs the number of weights in the CNN
 n_weights = [10, 20, 50, 100]
 train_time = [4.53, 4.64, 4.75, 6.01]
 test_accuracy = [89.34, 89.74, 89.78, 91.01]
