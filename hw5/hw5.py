@@ -127,7 +127,7 @@ class FCN(nn.Module):
         return x
 
 
-# In[27]:
+# In[7]:
 
 
 # Find the size of the model
@@ -137,68 +137,220 @@ total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Number of parameters: {total_params}")
 
 
-# In[104]:
+# In[29]:
 
 
 from torch.nn import Conv2d, ReLU, MaxPool2d, Linear, LogSoftmax
 from torch import flatten
 
-#Define the baseline CNN
-class CNN(nn.Module):
+# Define the baseline CNN
+# Adapted from https://pyimagesearch.com/2021/07/19/pytorch-training-your-first-convolutional-neural-network-cnn/
+class CNN_100K(nn.Module):
     def __init__(self, num_channels, classes): 
-        super(CNN, self).__init__()
-        # initialize first set of CONV => RELU => POOL layers
+        super(CNN_100K, self).__init__()
+        # Convolution + pooling layer 1
         self.conv1 = Conv2d(in_channels=num_channels, out_channels=20,
             kernel_size=(5, 5))
         self.relu1 = ReLU()
         self.maxpool1 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
-        # initialize second set of CONV => RELU => POOL layers
+        # Convolution + pooling layer 2
         self.conv2 = Conv2d(in_channels=20, out_channels=40,
             kernel_size=(5, 5))
         self.relu2 = ReLU()
         self.maxpool2 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
-        # initialize first (and only) set of FC => RELU layers
+        # Fully connected layer 1
         self.fc1 = Linear(in_features=640, out_features=120)
         self.relu3 = ReLU()
-        # initialize our softmax classifier
+        # Fully connected layer 2
         self.fc2 = Linear(in_features=120, out_features=classes)
         self.logSoftmax = LogSoftmax(dim=1)
  
     def forward(self, input):
-        # pass the input through our first set of CONV => RELU =>
-        # POOL layers
+        # Convolution + pooling layer 1
         x = self.conv1(input)
         x = self.relu1(x)
         x = self.maxpool1(x)
-        # pass the output from the previous layer through the second
-        # set of CONV => RELU => POOL layers
+        # Convolution + pooling layer 2
         x = self.conv2(x)
         x = self.relu2(x)
         x = self.maxpool2(x)
-        # flatten the output from the previous layer and pass it
-        # through our only set of FC => RELU layers
+        # Fully connected layer 1
         x = flatten(x, 1)
         x = self.fc1(x)
         x = self.relu3(x)
-        # pass the output to our softmax classifier to get our output
-        # predictions
+        # Fully connected layer 2
         x = self.fc2(x)
         output = self.logSoftmax(x)
-        # return the output predictions
         return output
 
 
-# In[105]:
+# In[19]:
 
 
 # Find the size of the model
-model = CNN(1, 10)
+model = CNN_100K(1, 10)
 
 total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"Number of parameters: {total_params}")
 
 
-# In[9]:
+# In[56]:
+
+
+class CNN_50K(nn.Module):
+    def __init__(self, num_channels, classes): 
+        super(CNN_50K, self).__init__()
+        # Convolution + pooling layer 1
+        self.conv1 = Conv2d(in_channels=num_channels, out_channels=10,
+            kernel_size=(5, 5))
+        self.relu1 = ReLU()
+        self.maxpool1 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Convolution + pooling layer 2
+        self.conv2 = Conv2d(in_channels=10, out_channels=20,
+            kernel_size=(5, 5))
+        self.relu2 = ReLU()
+        self.maxpool2 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Fully connected layer 1
+        self.fc1 = Linear(in_features=320, out_features=130)
+        self.relu3 = ReLU()
+        # Fully connected layer 2
+        self.fc2 = Linear(in_features=130, out_features=classes)
+        self.logSoftmax = LogSoftmax(dim=1)
+ 
+    def forward(self, input):
+        # Convolution + pooling layer 1
+        x = self.conv1(input)
+        x = self.relu1(x)
+        x = self.maxpool1(x)
+        # Convolution + pooling layer 2
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.maxpool2(x)
+        # Fully connected layer 1
+        x = flatten(x, 1)
+        x = self.fc1(x)
+        x = self.relu3(x)
+        # Fully connected layer 2
+        x = self.fc2(x)
+        output = self.logSoftmax(x)
+        return output
+
+
+# In[25]:
+
+
+# Find the size of the model
+model = CNN_50K(1, 10)
+
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Number of parameters: {total_params}")
+
+
+# In[71]:
+
+
+class CNN_20K(nn.Module):
+    def __init__(self, num_channels, classes): 
+        super(CNN_20K, self).__init__()
+        # Convolution + pooling layer 1
+        self.conv1 = Conv2d(in_channels=num_channels, out_channels=10,
+            kernel_size=(5, 5))
+        self.relu1 = ReLU()
+        self.maxpool1 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Convolution + pooling layer 2
+        self.conv2 = Conv2d(in_channels=10, out_channels=20,
+            kernel_size=(5, 5))
+        self.relu2 = ReLU()
+        self.maxpool2 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Fully connected layer 1
+        self.fc1 = Linear(in_features=320, out_features=40)
+        self.relu3 = ReLU()
+        # Fully connected layer 2
+        self.fc2 = Linear(in_features=40, out_features=classes)
+        self.logSoftmax = LogSoftmax(dim=1)
+ 
+    def forward(self, input):
+        # Convolution + pooling layer 1
+        x = self.conv1(input)
+        x = self.relu1(x)
+        x = self.maxpool1(x)
+        # Convolution + pooling layer 2
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.maxpool2(x)
+        # Fully connected layer 1
+        x = flatten(x, 1)
+        x = self.fc1(x)
+        x = self.relu3(x)
+        # Fully connected layer 2
+        x = self.fc2(x)
+        output = self.logSoftmax(x)
+        return output
+
+
+# In[72]:
+
+
+# Find the size of the model
+model = CNN_20K(1, 10)
+
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Number of parameters: {total_params}")
+
+
+# In[75]:
+
+
+class CNN_10K(nn.Module):
+    def __init__(self, num_channels, classes): 
+        super(CNN_10K, self).__init__()
+        # Convolution + pooling layer 1
+        self.conv1 = Conv2d(in_channels=num_channels, out_channels=10,
+            kernel_size=(5, 5))
+        self.relu1 = ReLU()
+        self.maxpool1 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Convolution + pooling layer 2
+        self.conv2 = Conv2d(in_channels=10, out_channels=20,
+            kernel_size=(5, 5))
+        self.relu2 = ReLU()
+        self.maxpool2 = MaxPool2d(kernel_size=(2, 2), stride=(2, 2))
+        # Fully connected layer 1
+        self.fc1 = Linear(in_features=320, out_features=15)
+        self.relu3 = ReLU()
+        # Fully connected layer 2
+        self.fc2 = Linear(in_features=15, out_features=classes)
+        self.logSoftmax = LogSoftmax(dim=1)
+ 
+    def forward(self, input):
+        # Convolution + pooling layer 1
+        x = self.conv1(input)
+        x = self.relu1(x)
+        x = self.maxpool1(x)
+        # Convolution + pooling layer 2
+        x = self.conv2(x)
+        x = self.relu2(x)
+        x = self.maxpool2(x)
+        # Fully connected layer 1
+        x = flatten(x, 1)
+        x = self.fc1(x)
+        x = self.relu3(x)
+        # Fully connected layer 2
+        x = self.fc2(x)
+        output = self.logSoftmax(x)
+        return output
+
+
+# In[76]:
+
+
+# Find the size of the model
+model = CNN_10K(1, 10)
+
+total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"Number of parameters: {total_params}")
+
+
+# In[86]:
 
 
 # Plot training loss and validation accuracy throughout the training epochs
@@ -413,7 +565,7 @@ mpl.rcParams['figure.dpi'] = 900
 fig.savefig('images/FCN-50K-2-learning-curves.png')
 
 
-# In[107]:
+# In[90]:
 
 
 # Create a function to train the CNN generally
@@ -443,6 +595,7 @@ def train_and_test_model_CNN(epochs = BaselineParams.epochs,
                              loss_function=LossFn.CROSS_ENTROPY,
                              opt=Optimizer.SGD,
                              plot_label='None',
+                             network='100K',
                              dropout=False,
                              init=False,
                              initializer=None,
@@ -452,7 +605,16 @@ def train_and_test_model_CNN(epochs = BaselineParams.epochs,
     random.seed(0)
 
     # Initialize the baseline neural network model
-    model = CNN(num_channels = BaselineParams.num_channels, classes = BaselineParams.classes)
+    if network == '10K':
+        model = CNN_10K(num_channels = BaselineParams.num_channels, classes = BaselineParams.classes)
+    elif network == '20K':
+        model = CNN_20K(num_channels = BaselineParams.num_channels, classes = BaselineParams.classes)
+    elif network == '50K':
+        model = CNN_50K(num_channels = BaselineParams.num_channels, classes = BaselineParams.classes)
+    elif network == '100K':
+        model = CNN_100K(num_channels = BaselineParams.num_channels, classes = BaselineParams.classes)
+    else:
+        raise AssertionError('Invalid network name')
 
     train_batches = DataLoader(train_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
     val_batches = DataLoader(val_split, batch_size=BaselineParams.train_batch_size, shuffle=True)
@@ -482,7 +644,7 @@ def train_and_test_model_CNN(epochs = BaselineParams.epochs,
     
     # Iterate over epochs, batches with progress bar and train+ validate the ACAIGFCN
     # Track the loss and validation accuracy
-    print(f"Reporting statistics for optimizer: {opt.value}, lr = {learning_rate}, dropout={dropout}, initializer={initializer}, batch_norm={batch_norm}")
+    print(f"Reporting statistics for network: {network}, optimizer: {opt.value}, lr = {learning_rate}, dropout={dropout}, initializer={initializer}, batch_norm={batch_norm}")
     start_time = time.time()
     for epoch in tqdm.trange(epochs):
     
@@ -536,11 +698,11 @@ def train_and_test_model_CNN(epochs = BaselineParams.epochs,
                 
         # Record accuracy for the epoch; print training loss, validation accuracy
         # Record standard deviation too
-        #if epoch == epochs-1:
-        print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
-        print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
-        print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
-        print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
+        if epoch == epochs-1:
+            print(f"Epoch: {epoch}; Training loss: {train_loss_list[epoch]}")
+            print(f"Epoch: {epoch}; Validation Accuracy: {validation_accuracy_list[epoch]*100}%")
+            print(f"Epoch: {epoch}; Validation Std Dev: {validation_std_list[epoch]}")
+            print(f"Elapsed training time: {(time.time() - start_time)/60} minutes")
 
     if init:
         plot_loss_and_accuracy(train_loss_list, validation_accuracy_list, label=f"initializer = {initializer}")
@@ -574,10 +736,38 @@ def train_and_test_model_CNN(epochs = BaselineParams.epochs,
     return train_loss_list, validation_accuracy_list, validation_std_list, test_accuracy, test_std
 
 
-# In[108]:
+# In[92]:
 
 
-_,_,_,_,_ = train_and_test_model_CNN(opt=Optimizer.ADAM, learning_rate=0.001,plot_label='CNN 100K')
+_,_,_,_,_ = train_and_test_model_CNN(network='10K', opt=Optimizer.ADAM, learning_rate=0.001, plot_label='CNN 10K')
+_,_,_,_,_ = train_and_test_model_CNN(network='20K', opt=Optimizer.ADAM, learning_rate=0.001, plot_label='CNN 20K')
+_,_,_,_,_ = train_and_test_model_CNN(network='50K', opt=Optimizer.ADAM, learning_rate=0.001, plot_label='CNN 50K')
+_,_,_,_,_ = train_and_test_model_CNN(network='100K', opt=Optimizer.ADAM, learning_rate=0.001,plot_label='CNN 100K')
+
+
+# In[93]:
+
+
+fig
+
+
+# In[94]:
+
+
+import matplotlib as mpl
+mpl.rcParams['figure.dpi'] = 900
+fig.savefig('images/CNN-learning-curves.png')
+
+
+# In[98]:
+
+
+n_weights = [10, 20, 50, 100]
+train_time = [4.53, 4.64, 4.75, 6.01]
+test_accuracy = [89.34, 89.74, 89.78, 91.01]
+
+fig_cnn_training, ax_cnn_training = plt.subplots(1, 1)
+ax_cnn_training.plot(n_weights, test_accuracy)
 
 
 # In[ ]:
